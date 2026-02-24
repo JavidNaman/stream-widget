@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-family: 'Vazirmatn', sans-serif;
+}
+#widget-wrapper {
+    display: inline-flex;
+    background: rgba(20, 20, 20, 0.45);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    border-radius: 16px;
+    padding: 16px 24px;
+    gap: 20px;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 1.5s ease-in-out;
+    width: max-content;
+    direction: rtl;
+}
+.visible {
+    opacity: 1 !important;
+}
+.avatar-box {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+}
+.avatar-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.info-box {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    text-align: right;
+}
+.name-label {
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+.detail-label {
+    font-size: 14px;
+    color: #cccccc;
+    margin: 0;
+    font-weight: 400;
+}
+</style>
+</head>
+<body>
+<div id="widget-wrapper">
+    <div class="avatar-box">
+        <img id="avatar-img" src="" alt="">
+    </div>
+    <div class="info-box">
+        <p id="info-name" class="name-label"></p>
+        <p id="info-age" class="detail-label"></p>
+        <p id="info-loc" class="detail-label"></p>
+    </div>
+</div>
+<script>
+let entries = [];
+let activeIdx = 0;
+const widgetWrapper = document.getElementById('widget-wrapper');
+const avatarImg = document.getElementById('avatar-img');
+const infoName = document.getElementById('info-name');
+const infoAge = document.getElementById('info-age');
+const infoLoc = document.getElementById('info-loc');
+
+async function fetchData() {
+    try {
+        const req = await fetch('https://raw.githubusercontent.com/JavidNaman/stream-widget/main/data.json');
+        entries = await req.json();
+        if (entries.length > 0) {
+            applyData();
+            setInterval(cycleWidget, 8000);
+        }
+    } catch (err) {}
+}
+
+function applyData() {
+    const current = entries[activeIdx];
+    avatarImg.src = current.image_url;
+    infoName.innerText = current.first_name + ' ' + current.last_name;
+    infoAge.innerText = current.age;
+    infoLoc.innerText = current.location;
+    widgetWrapper.classList.add('visible');
+}
+
+function cycleWidget() {
+    widgetWrapper.classList.remove('visible');
+    setTimeout(() => {
+        activeIdx = (activeIdx + 1) % entries.length;
+        applyData();
+    }, 1500);
+}
+
+fetchData();
+</script>
+</body>
+</html>
