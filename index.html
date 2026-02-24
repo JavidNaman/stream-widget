@@ -85,8 +85,9 @@ const infoLoc = document.getElementById('info-loc');
 async function fetchData() {
     try {
         const req = await fetch('https://raw.githubusercontent.com/JavidNaman/stream-widget/main/data.json');
-        entries = await req.json();
-        if (entries.length > 0) {
+        const rawData = await req.json();
+        if (rawData.length > 0) {
+            entries = rawData.sort(() => Math.random() - 0.5);
             applyData();
             setInterval(cycleWidget, 8000);
         }
@@ -106,6 +107,9 @@ function cycleWidget() {
     widgetWrapper.classList.remove('visible');
     setTimeout(() => {
         activeIdx = (activeIdx + 1) % entries.length;
+        if (activeIdx === 0) {
+            entries.sort(() => Math.random() - 0.5);
+        }
         applyData();
     }, 1500);
 }
