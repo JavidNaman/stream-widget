@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
 <style>
+:root {
+    --glass-bg: rgba(12, 12, 14, 0.52);
+    --glass-top: rgba(255, 255, 255, 0.10);
+    --glass-stroke: rgba(255, 255, 255, 0.22);
+    --text-main: #f4f6f8;
+    --text-subtle: #c8cdd3;
+    --accent: #e1e5ea;
+}
 body {
     margin: 0;
     padding: 0;
@@ -12,30 +20,47 @@ body {
 }
 #widget-wrapper {
     display: inline-flex;
-    background: rgba(20, 20, 20, 0.45);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-    border-radius: 16px;
-    padding: 16px 24px;
-    gap: 20px;
+    position: relative;
+    isolation: isolate;
+    background: var(--glass-bg);
+    backdrop-filter: blur(18px) saturate(115%);
+    -webkit-backdrop-filter: blur(18px) saturate(115%);
+    border: 1px solid var(--glass-stroke);
+    box-shadow:
+        0 14px 40px rgba(0, 0, 0, 0.5),
+        0 1px 0 rgba(255, 255, 255, 0.12) inset;
+    border-radius: 22px;
+    padding: 14px 16px;
+    gap: 12px;
     align-items: center;
     opacity: 0;
     transition: opacity 0.9s ease-in-out;
     width: max-content;
     direction: rtl;
 }
+#widget-wrapper::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, var(--glass-top), rgba(255, 255, 255, 0));
+    pointer-events: none;
+    z-index: 0;
+}
 .visible {
     opacity: 1 !important;
 }
 .avatar-box {
-    width: 80px;
-    height: 80px;
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
-    border: 2px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    background: rgba(0, 0, 0, 0.2);
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.12),
+        0 8px 20px rgba(0, 0, 0, 0.35);
 }
 .avatar-box img {
     width: 100%;
@@ -45,20 +70,55 @@ body {
 .info-box {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 4px;
     text-align: right;
+    min-width: 170px;
+    position: relative;
+    z-index: 1;
+}
+.info-box p {
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
 }
 .name-label {
     font-size: 20px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--text-main);
     margin: 0;
+    line-height: 1.15;
 }
 .detail-label {
     font-size: 14px;
-    color: #cccccc;
+    color: var(--text-subtle);
     margin: 0;
     font-weight: 400;
+    line-height: 1.25;
+}
+#info-age {
+    color: var(--accent);
+    font-weight: 500;
+}
+.is-hidden {
+    display: none;
+}
+@media (max-width: 520px) {
+    #widget-wrapper {
+        padding: 11px 13px;
+        gap: 10px;
+        border-radius: 16px;
+    }
+    .avatar-box {
+        width: 60px;
+        height: 60px;
+    }
+    .name-label {
+        font-size: 18px;
+    }
+    .detail-label {
+        font-size: 13px;
+    }
+    .info-box {
+        min-width: 140px;
+    }
 }
 </style>
 </head>
@@ -98,13 +158,13 @@ async function fetchData() {
             preloadNextImage();
             scheduleNextCycle();
         }
-    } catch (err) {}
+    } catch {}
 }
 
 function preloadImage(url) {
     return new Promise((resolve, reject) => {
         const img = new Image();
-        img.onload = () => resolve(url);
+        img.onload = () => resolve();
         img.onerror = reject;
         img.src = url;
     });
@@ -114,14 +174,26 @@ async function applyData(idx) {
     const current = entries[idx];
     await preloadImage(current.image_url);
     avatarImg.src = current.image_url;
-    infoName.innerText = current.first_name + ' ' + current.last_name;
-    infoAge.innerText = current.age;
-    infoLoc.innerText = current.location;
+    const fullName = [current.first_name, current.last_name].filter(Boolean).join(' ').trim();
+    infoName.innerText = fullName || 'Unknown';
+    setOptionalText(infoAge, current.age, 'سن: ');
+    setOptionalText(infoLoc, current.location, 'شهر: ');
     widgetWrapper.classList.add('visible');
 }
 
+function setOptionalText(el, value, prefix = '') {
+    const text = value === null || value === undefined ? '' : String(value).trim();
+    if (!text) {
+        el.classList.add('is-hidden');
+        el.innerText = '';
+        return;
+    }
+    el.classList.remove('is-hidden');
+    el.innerText = prefix + text;
+}
+
 function getNextIndex() {
-    let nextIdx = (activeIdx + 1) % entries.length;
+    const nextIdx = (activeIdx + 1) % entries.length;
     if (nextIdx === 0) {
         entries.sort(() => Math.random() - 0.5);
     }
@@ -147,10 +219,8 @@ async function cycleWidget() {
     const nextIdx = getNextIndex();
 
     try {
-        // Do not switch to next entry until its image is fully loaded.
         await preloadImage(entries[nextIdx].image_url);
-    } catch (err) {
-        // Keep current entry on screen and retry shortly on network issues.
+    } catch {
         isCycling = false;
         cycleTimer = setTimeout(cycleWidget, 1500);
         return;
