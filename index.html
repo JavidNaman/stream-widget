@@ -22,7 +22,7 @@ body {
     gap: 20px;
     align-items: center;
     opacity: 0;
-    transition: opacity 1.5s ease-in-out;
+    transition: opacity 0.9s ease-in-out;
     width: max-content;
     direction: rtl;
 }
@@ -76,6 +76,12 @@ body {
 <script>
 let entries = [];
 let activeIdx = 0;
+let isCycling = false;
+let cycleTimer = null;
+
+const DISPLAY_MS = 5000;
+const FADE_MS = 900;
+
 const widgetWrapper = document.getElementById('widget-wrapper');
 const avatarImg = document.getElementById('avatar-img');
 const infoName = document.getElementById('info-name');
@@ -88,14 +94,25 @@ async function fetchData() {
         const rawData = await req.json();
         if (rawData.length > 0) {
             entries = rawData.sort(() => Math.random() - 0.5);
-            applyData();
-            setInterval(cycleWidget, 8000);
+            await applyData(activeIdx);
+            preloadNextImage();
+            scheduleNextCycle();
         }
     } catch (err) {}
 }
 
-function applyData() {
-    const current = entries[activeIdx];
+function preloadImage(url) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(url);
+        img.onerror = reject;
+        img.src = url;
+    });
+}
+
+async function applyData(idx) {
+    const current = entries[idx];
+    await preloadImage(current.image_url);
     avatarImg.src = current.image_url;
     infoName.innerText = current.first_name + ' ' + current.last_name;
     infoAge.innerText = current.age;
@@ -103,15 +120,53 @@ function applyData() {
     widgetWrapper.classList.add('visible');
 }
 
-function cycleWidget() {
+function getNextIndex() {
+    let nextIdx = (activeIdx + 1) % entries.length;
+    if (nextIdx === 0) {
+        entries.sort(() => Math.random() - 0.5);
+    }
+    return nextIdx;
+}
+
+function preloadNextImage() {
+    if (entries.length < 2) return;
+    const nextIdx = getNextIndex();
+    preloadImage(entries[nextIdx].image_url).catch(() => {});
+}
+
+function scheduleNextCycle() {
+    if (cycleTimer) {
+        clearTimeout(cycleTimer);
+    }
+    cycleTimer = setTimeout(cycleWidget, DISPLAY_MS);
+}
+
+async function cycleWidget() {
+    if (isCycling || entries.length <= 1) return;
+    isCycling = true;
+    const nextIdx = getNextIndex();
+
+    try {
+        // Do not switch to next entry until its image is fully loaded.
+        await preloadImage(entries[nextIdx].image_url);
+    } catch (err) {
+        // Keep current entry on screen and retry shortly on network issues.
+        isCycling = false;
+        cycleTimer = setTimeout(cycleWidget, 1500);
+        return;
+    }
+
     widgetWrapper.classList.remove('visible');
-    setTimeout(() => {
-        activeIdx = (activeIdx + 1) % entries.length;
-        if (activeIdx === 0) {
-            entries.sort(() => Math.random() - 0.5);
+    setTimeout(async () => {
+        activeIdx = nextIdx;
+        try {
+            await applyData(activeIdx);
+            preloadNextImage();
+        } finally {
+            isCycling = false;
+            scheduleNextCycle();
         }
-        applyData();
-    }, 1500);
+    }, FADE_MS);
 }
 
 fetchData();
