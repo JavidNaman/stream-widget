@@ -5,33 +5,33 @@
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root {
-    --glass-bg: rgba(12, 12, 14, 0.52);
-    --glass-top: rgba(255, 255, 255, 0.10);
+    --glass-bg: rgba(8, 10, 14, 0.86);
+    --glass-top: rgba(255, 255, 255, 0.07);
     --glass-stroke: rgba(255, 255, 255, 0.22);
-    --text-main: #f4f6f8;
-    --text-subtle: #c8cdd3;
-    --accent: #e1e5ea;
+    --text-main: #f7f9fc;
+    --text-subtle: #d1d8e2;
+    --accent: #f0f4fa;
 }
 body {
     margin: 0;
     padding: 0;
     overflow: hidden;
     font-family: 'Vazirmatn', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
 }
 #widget-wrapper {
     display: inline-flex;
     position: relative;
     isolation: isolate;
     background: var(--glass-bg);
-    backdrop-filter: blur(18px) saturate(115%);
-    -webkit-backdrop-filter: blur(18px) saturate(115%);
+    backdrop-filter: blur(14px) saturate(125%);
+    -webkit-backdrop-filter: blur(14px) saturate(125%);
     border: 1px solid var(--glass-stroke);
-    box-shadow:
-        0 14px 40px rgba(0, 0, 0, 0.5),
-        0 1px 0 rgba(255, 255, 255, 0.12) inset;
+    box-shadow: none;
     border-radius: 22px;
-    padding: 14px 16px;
-    gap: 12px;
+    padding: 14px 18px;
+    gap: 14px;
     align-items: center;
     opacity: 0;
     transition: opacity 0.9s ease-in-out;
@@ -51,16 +51,14 @@ body {
     opacity: 1 !important;
 }
 .avatar-box {
-    width: 72px;
-    height: 72px;
+    width: 78px;
+    height: 78px;
     border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
     border: 1px solid rgba(255, 255, 255, 0.38);
     background: rgba(0, 0, 0, 0.2);
-    box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.12),
-        0 8px 20px rgba(0, 0, 0, 0.35);
+    box-shadow: none;
 }
 .avatar-box img {
     width: 100%;
@@ -72,26 +70,34 @@ body {
     flex-direction: column;
     gap: 4px;
     text-align: right;
-    min-width: 170px;
+    min-width: 0;
+    max-width: 420px;
     position: relative;
     z-index: 1;
 }
 .info-box p {
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+    text-shadow: none;
 }
 .name-label {
-    font-size: 20px;
+    font-size: 19px;
     font-weight: 700;
     color: var(--text-main);
     margin: 0;
-    line-height: 1.15;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.1px;
 }
 .detail-label {
-    font-size: 14px;
+    font-size: 16px;
     color: var(--text-subtle);
     margin: 0;
     font-weight: 400;
-    line-height: 1.25;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 #info-age {
     color: var(--accent);
@@ -99,26 +105,6 @@ body {
 }
 .is-hidden {
     display: none;
-}
-@media (max-width: 520px) {
-    #widget-wrapper {
-        padding: 11px 13px;
-        gap: 10px;
-        border-radius: 16px;
-    }
-    .avatar-box {
-        width: 60px;
-        height: 60px;
-    }
-    .name-label {
-        font-size: 18px;
-    }
-    .detail-label {
-        font-size: 13px;
-    }
-    .info-box {
-        min-width: 140px;
-    }
 }
 </style>
 </head>
@@ -148,19 +134,6 @@ const infoName = document.getElementById('info-name');
 const infoAge = document.getElementById('info-age');
 const infoLoc = document.getElementById('info-loc');
 
-async function fetchData() {
-    try {
-        const req = await fetch('https://raw.githubusercontent.com/JavidNaman/stream-widget/main/data.json');
-        const rawData = await req.json();
-        if (rawData.length > 0) {
-            entries = rawData.sort(() => Math.random() - 0.5);
-            await applyData(activeIdx);
-            preloadNextImage();
-            scheduleNextCycle();
-        }
-    } catch {}
-}
-
 function preloadImage(url) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -170,15 +143,15 @@ function preloadImage(url) {
     });
 }
 
-async function applyData(idx) {
-    const current = entries[idx];
-    await preloadImage(current.image_url);
-    avatarImg.src = current.image_url;
-    const fullName = [current.first_name, current.last_name].filter(Boolean).join(' ').trim();
-    infoName.innerText = fullName || 'Unknown';
-    setOptionalText(infoAge, current.age, 'سن: ');
-    setOptionalText(infoLoc, current.location, 'شهر: ');
-    widgetWrapper.classList.add('visible');
+async function resolveImageReady(url) {
+    const safeUrl = url === null || url === undefined ? '' : String(url).trim();
+    if (!safeUrl) return { ok: false, url: '' };
+    try {
+        await preloadImage(safeUrl);
+        return { ok: true, url: safeUrl };
+    } catch {
+        return { ok: false, url: '' };
+    }
 }
 
 function setOptionalText(el, value, prefix = '') {
@@ -192,6 +165,26 @@ function setOptionalText(el, value, prefix = '') {
     el.innerText = prefix + text;
 }
 
+async function applyData(idx, imageState = null) {
+    const current = entries[idx];
+    const resolved = imageState || await resolveImageReady(current.image_url);
+
+    if (resolved.ok) {
+        avatarImg.src = resolved.url;
+        avatarImg.parentElement.classList.remove('is-hidden');
+    } else {
+        avatarImg.removeAttribute('src');
+        avatarImg.parentElement.classList.add('is-hidden');
+    }
+
+    const fullName = [current.first_name, current.last_name].filter(Boolean).join(' ').trim();
+    infoName.innerText = fullName || 'Unknown';
+    avatarImg.alt = fullName;
+    setOptionalText(infoAge, current.age, 'سن: ');
+    setOptionalText(infoLoc, current.location, 'شهر: ');
+    widgetWrapper.classList.add('visible');
+}
+
 function getNextIndex() {
     const nextIdx = (activeIdx + 1) % entries.length;
     if (nextIdx === 0) {
@@ -203,7 +196,11 @@ function getNextIndex() {
 function preloadNextImage() {
     if (entries.length < 2) return;
     const nextIdx = getNextIndex();
-    preloadImage(entries[nextIdx].image_url).catch(() => {});
+    const nextUrl = entries[nextIdx].image_url === null || entries[nextIdx].image_url === undefined
+        ? ''
+        : String(entries[nextIdx].image_url).trim();
+    if (!nextUrl) return;
+    preloadImage(nextUrl).catch(() => {});
 }
 
 function scheduleNextCycle() {
@@ -217,26 +214,32 @@ async function cycleWidget() {
     if (isCycling || entries.length <= 1) return;
     isCycling = true;
     const nextIdx = getNextIndex();
-
-    try {
-        await preloadImage(entries[nextIdx].image_url);
-    } catch {
-        isCycling = false;
-        cycleTimer = setTimeout(cycleWidget, 1500);
-        return;
-    }
+    const nextImageState = await resolveImageReady(entries[nextIdx].image_url);
 
     widgetWrapper.classList.remove('visible');
     setTimeout(async () => {
         activeIdx = nextIdx;
         try {
-            await applyData(activeIdx);
+            await applyData(activeIdx, nextImageState);
             preloadNextImage();
         } finally {
             isCycling = false;
             scheduleNextCycle();
         }
     }, FADE_MS);
+}
+
+async function fetchData() {
+    try {
+        const req = await fetch('https://raw.githubusercontent.com/JavidNaman/stream-widget/main/data.json');
+        const rawData = await req.json();
+        if (Array.isArray(rawData) && rawData.length > 0) {
+            entries = rawData.sort(() => Math.random() - 0.5);
+            await applyData(activeIdx);
+            preloadNextImage();
+            scheduleNextCycle();
+        }
+    } catch {}
 }
 
 fetchData();
