@@ -25,27 +25,22 @@
 
 :root {
     --scale: 1;
-    --fade: 620ms;
+    --fade: 700ms;
 
-    /* Sized from the data: the widest 99% of records need 392px of card. */
-    --w: 410px;
-    --h: 116px;
+    --h: 112px;
     --avatar: 76px;
+    --max-w: 470px;
 
-    /* Apple's standard "smooth" curve — decelerates hard, never overshoots. */
-    --ease: cubic-bezier(0.32, 0.72, 0, 1);
-
-    /* The glass is painted rather than sampled, so it has to stay dark enough
-       for white text to survive over a bright shot as well as a dark one. */
+    /* Painted rather than sampled, so it has to stay dark enough for white text
+       to survive over a blown-out shot as well as a dark one. */
     --tint: 18, 20, 26;
     --tint-alpha: 0.62;
 
-    /* Tuned against the worst case — a blown-out white shot behind the glass,
-       where the panel only reaches a mid grey and white text has the least to
-       work with. */
     --ink: #ffffff;
     --ink-dim: rgba(255, 255, 255, 0.86);
     --ink-faint: rgba(255, 255, 255, 0.68);
+
+    --ease: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 * {
@@ -65,43 +60,62 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-#stage {
+/* Shared by the card and the hidden ruler that measures the next person, so the
+   two can never disagree about how wide a record wants to be. */
+.box {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: var(--h);
+    max-width: var(--max-w);
+    /* The end side needs more room than the start: that is where the capsule
+       curves away from the text. */
+    padding-inline-start: 18px;
+    padding-inline-end: 34px;
+}
+
+/* With no portrait, the text would otherwise sit right against the curve. */
+.box.no-photo {
+    padding-inline-start: 32px;
+}
+
+/* Anchored top-right so the card grows leftward as names get longer: the
+   portrait stays exactly where the streamer put it. */
+#card {
     position: absolute;
     top: 0;
     right: 0;
-    width: var(--w);
-    height: var(--h);
+    width: max-content;
+    border-radius: calc(var(--h) / 2);
     transform: scale(var(--scale));
     transform-origin: top right;
-}
 
-/* ---------------------------------------------------------------- the glass */
-
-/* One glass container, never glass stacked on glass: the material is built from
-   a translucent body, a lit top edge and a bright bottom lip, all painted. */
-#card {
-    position: absolute;
-    inset: 0;
-    border-radius: calc(var(--h) / 2);
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0.04) 38%,
             rgba(255, 255, 255, 0) 58%),
         radial-gradient(120% 160% at 78% -30%, rgba(255, 255, 255, 0.22), transparent 55%),
         radial-gradient(90% 130% at 10% 132%, rgba(255, 255, 255, 0.14), transparent 58%),
         rgba(var(--tint), var(--tint-alpha));
-    /* Inset only — an outer drop shadow reads as muddy haze once it is composited
-       over video. This is light gathering just inside the edge, not a shadow. */
     box-shadow:
         inset 0 4px 10px -6px rgba(255, 255, 255, 0.55),
         inset 0 -4px 10px -6px rgba(255, 255, 255, 0.3);
+
     opacity: 0;
-    transition: opacity 900ms var(--ease);
+    /* The panel arrives once and then stays put for the whole stream. Afterwards
+       only its width changes, morphing to fit whoever is next. */
+    transition:
+        opacity 900ms ease-in-out,
+        width var(--fade) var(--ease),
+        padding-inline-start var(--fade) var(--ease);
 }
 
-/* The rim is what sells it as glass rather than tinted plastic: a hairline that
-   is bright where the light hits and nearly gone where it doesn't, following the
-   capsule all the way round. Drawn as a masked gradient border because a plain
-   inset shadow can only be uniform. */
+#card.is-lit {
+    opacity: 1;
+}
+
+/* The rim is what reads as glass rather than tinted plastic: a hairline that is
+   bright where the light would catch the capsule and nearly gone where it would
+   not. Drawn as a masked gradient border, since an inset shadow is uniform. */
 #card::after {
     content: "";
     position: absolute;
@@ -122,61 +136,28 @@ body {
     pointer-events: none;
 }
 
-#card.is-lit {
-    opacity: 1;
-}
-
-/* Specular sweep. It fires once per person instead of looping forever, so the
-   widget costs nothing between transitions. */
-#sheen {
+/* Offscreen ruler: the next person is laid out here first, so the panel knows
+   what width to morph to before anything visible changes. */
+#measure {
     position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    overflow: hidden;
+    top: 0;
+    right: 0;
+    width: max-content;
+    visibility: hidden;
     pointer-events: none;
 }
 
-#sheen::before {
-    content: "";
-    position: absolute;
-    top: -50%;
-    bottom: -50%;
-    width: 38%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.38), transparent);
-    transform: translateX(-180%) rotate(14deg);
-    opacity: 0;
-}
-
-#stage.is-sweeping #sheen::before {
-    animation: sweep 1500ms var(--ease);
-}
-
-@keyframes sweep {
-    0% { transform: translateX(-180%) rotate(14deg); opacity: 0; }
-    22% { opacity: 1; }
-    100% { transform: translateX(360%) rotate(14deg); opacity: 0; }
-}
-
-/* ------------------------------------------------------------------ contents */
-
-#content {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    /* The right cap holds the portrait; the left one needs room for its curve. */
-    padding-inline-start: 20px;
-    padding-inline-end: 30px;
-}
-
+/* Only the contents change from person to person. */
 .avatar,
 .info {
-    /* opacity and transform only: both composite on the GPU, so OBS never has to
-       repaint the layer mid-transition. */
     opacity: 0;
-    will-change: opacity, transform;
-    transition: opacity var(--fade) var(--ease), transform var(--fade) var(--ease);
+    transition: opacity var(--fade) ease-in-out;
+    will-change: opacity;
+}
+
+#card.is-showing .avatar,
+#card.is-showing .info {
+    opacity: 1;
 }
 
 .avatar {
@@ -185,8 +166,12 @@ body {
     width: var(--avatar);
     height: var(--avatar);
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.08);
-    transform: scale(0.92);
+}
+
+/* People with no portrait simply have no portrait: the card closes up around
+   the text instead of showing a stand-in. */
+.avatar.is-empty {
+    display: none;
 }
 
 .avatar img {
@@ -197,7 +182,6 @@ body {
     object-fit: cover;
 }
 
-/* Same lit rim as the panel, so the portrait sits in the glass instead of on it. */
 .avatar::after {
     content: "";
     position: absolute;
@@ -220,83 +204,47 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 3px;
-    flex: 1 1 auto;
+    gap: 2px;
     min-width: 0;
     text-align: right;
-    transform: translateY(14px);
 }
 
-/* Entered state. The portrait settles first and the text follows just behind it,
-   which is what makes the change read as one motion rather than two. */
-#stage.is-showing .avatar {
-    opacity: 1;
-    transform: scale(1);
-}
-
-#stage.is-showing .info {
-    opacity: 1;
-    transform: translateY(0);
-    transition-delay: 70ms;
-}
-
-/* Leaving state: everything lifts and clears together. */
-#stage.is-hiding .avatar {
-    opacity: 0;
-    transform: scale(0.96);
-}
-
-#stage.is-hiding .info {
-    opacity: 0;
-    transform: translateY(-12px);
-}
-
-.name {
-    margin: 0;
-    font-size: 19px;
-    font-weight: 700;
-    line-height: 1.25;
-    color: var(--ink);
-    letter-spacing: 0.1px;
-    /* Two lines then ellipsis: a few source records have an entire eyewitness
-       account typed into the name field. */
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    overflow: hidden;
-    overflow-wrap: anywhere;
-}
-
+.name,
 .meta,
 .date {
     margin: 0;
-    line-height: 1.35;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
+.name {
+    font-size: var(--name-size, 23px);
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--ink);
+}
+
 .meta {
-    font-size: 15px;
+    font-size: 17px;
+    line-height: 1.35;
     color: var(--ink-dim);
 }
 
 .date {
-    font-size: 14px;
+    font-size: 15px;
+    line-height: 1.35;
     color: var(--ink-faint);
 }
 
 .sep {
     opacity: 0.4;
-    margin: 0 6px;
+    margin: 0 7px;
 }
 
 .is-empty {
     display: none;
 }
-
-/* --------------------------------------------------------------- adaptations */
 
 @media (prefers-reduced-transparency: reduce) {
     :root {
@@ -313,29 +261,31 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    #card,
     .avatar,
     .info {
         transition-duration: 120ms;
-        transform: none !important;
-    }
-
-    #stage.is-sweeping #sheen::before {
-        animation: none;
     }
 }
 </style>
 </head>
 <body>
 
-<div id="stage">
-    <div id="card"><div id="sheen"></div></div>
-    <div id="content">
-        <div class="avatar"><img id="photo" alt="" decoding="async"></div>
-        <div class="info">
-            <p id="name" class="name"></p>
-            <p id="meta" class="meta"></p>
-            <p id="date" class="date"></p>
-        </div>
+<div id="card" class="box">
+    <div class="avatar"><img alt="" decoding="async"></div>
+    <div class="info">
+        <p class="name"></p>
+        <p class="meta"></p>
+        <p class="date"></p>
+    </div>
+</div>
+
+<div id="measure" class="box" aria-hidden="true">
+    <div class="avatar"></div>
+    <div class="info">
+        <p class="name"></p>
+        <p class="meta"></p>
+        <p class="date"></p>
     </div>
 </div>
 
@@ -343,7 +293,6 @@ body {
 'use strict';
 
 const DATA_URL = 'data.json';
-const PLACEHOLDER = 'images/_no-photo.webp';
 
 const params = new URLSearchParams(location.search);
 
@@ -359,7 +308,7 @@ function readNumber(name, fallback, min, max) {
 }
 
 const HOLD_MS = readNumber('duration', 6000, 1200, 120000);
-const FADE_MS = readNumber('fade', 620, 0, 4000);
+const FADE_MS = readNumber('fade', 700, 0, 4000);
 const SCALE = readNumber('scale', 1, 0.4, 4);
 const SHUFFLE = params.get('order') !== 'list';
 
@@ -367,30 +316,22 @@ const root = document.documentElement;
 root.style.setProperty('--fade', FADE_MS + 'ms');
 root.style.setProperty('--scale', String(SCALE));
 
-// How dense the glass is. The stylesheet default survives a blown-out white
-// scene; over a consistently dark one it can go lower and let more of the shot
-// through. Only written when asked for, so that leaving it alone keeps the
-// reduced-transparency and high-contrast rules in charge.
+// Only written when asked for, so leaving it alone keeps the reduced-transparency
+// and high-contrast rules in charge of how dense the glass is.
 if (params.has('glass')) {
     root.style.setProperty('--tint-alpha', String(readNumber('glass', 0.62, 0.25, 0.95)));
 }
 
-const elStage = document.getElementById('stage');
 const elCard = document.getElementById('card');
-const elPhoto = document.getElementById('photo');
-const elName = document.getElementById('name');
-const elMeta = document.getElementById('meta');
-const elDate = document.getElementById('date');
+const elMeasure = document.getElementById('measure');
 
 let people = [];
 let cursor = 0;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/* --------------------------------------------------------------- data loading */
-
-/** Fetches the roster, retrying forever so a source that starts before the
-    network is up eventually recovers on its own instead of staying blank. */
+/** Fetches the roster, retrying so a source that starts before the network is up
+    recovers on its own instead of staying blank. */
 async function loadPeople() {
     for (let attempt = 0; ; attempt++) {
         try {
@@ -405,8 +346,6 @@ async function loadPeople() {
     }
 }
 
-/* -------------------------------------------------------------------- ordering */
-
 function shuffle(list) {
     for (let i = list.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -415,8 +354,8 @@ function shuffle(list) {
     return list;
 }
 
-/** Walks the roster, reshuffling on each pass without ever repeating the person
-    who was just on screen across the wrap. */
+/** Walks the roster, reshuffling on each pass without repeating the person who
+    was just on screen across the wrap. */
 function nextPerson() {
     if (cursor >= people.length) {
         const last = people[people.length - 1];
@@ -429,21 +368,19 @@ function nextPerson() {
     return people[cursor++];
 }
 
-/* --------------------------------------------------------------------- render */
-
-const imageFor = (person) => (person.photo ? 'images/' + person.id + '.jpg' : PLACEHOLDER);
-
-/** Resolves to a portrait that is decoded and ready to paint — never rejects, so
-    one dead image can't stall the loop or cause a half-drawn frame. */
-async function resolveImage(src) {
+/** Resolves to a fully decoded portrait, or null when there is none to show.
+    Waiting on decode here — rather than just assigning src — is what stops a
+    slow image from appearing a beat after the name it belongs to. */
+async function resolveImage(person) {
+    if (!person.photo) return null;
+    const src = 'images/' + person.id + '.jpg';
     const image = new Image();
     image.src = src;
     try {
         await image.decode();
         return src;
     } catch {
-        if (src === PLACEHOLDER) return src;
-        return resolveImage(PLACEHOLDER);
+        return null;
     }
 }
 
@@ -457,41 +394,62 @@ function setText(el, text) {
 const FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 const toPersianDigits = (value) => String(value).replace(/[0-9]/g, (d) => FA_DIGITS[Number(d)]);
 
-function paint(person, src) {
-    elPhoto.src = src;
-    elPhoto.alt = person.name || '';
+/** Lays a person out inside `box` — either the visible card or the ruler. */
+function paint(box, person, src) {
+    const avatar = box.querySelector('.avatar');
+    const image = avatar.querySelector('img');
 
-    setText(elName, person.name || 'ناشناس');
+    avatar.classList.toggle('is-empty', !src);
+    box.classList.toggle('no-photo', !src);
+    if (image) {
+        if (src) {
+            image.src = src;
+            image.alt = person.name || '';
+        } else {
+            image.removeAttribute('src');
+        }
+    }
 
-    // Age and place share a line; whichever is missing simply drops out, and if
-    // both are missing the line disappears rather than leaving a gap.
+    setText(box.querySelector('.name'), person.name || 'ناشناس');
+
+    // Age and place share a line; whichever is missing drops out, and if both are
+    // missing the line disappears rather than leaving a gap.
     const bits = [];
     if (Number.isFinite(person.age)) bits.push(toPersianDigits(person.age) + ' ساله');
     if (person.place) bits.push(person.place);
 
-    elMeta.replaceChildren();
-    elMeta.classList.toggle('is-empty', bits.length === 0);
+    const meta = box.querySelector('.meta');
+    meta.replaceChildren();
+    meta.classList.toggle('is-empty', bits.length === 0);
     bits.forEach((bit, index) => {
         if (index > 0) {
             const sep = document.createElement('span');
             sep.className = 'sep';
             sep.textContent = '·';
-            elMeta.append(sep);
+            meta.append(sep);
         }
-        elMeta.append(document.createTextNode(bit));
+        meta.append(document.createTextNode(bit));
     });
 
-    setText(elDate, person.date);
+    setText(box.querySelector('.date'), person.date);
+    fitName(box);
 }
 
-/** Runs the light across the glass once, in step with the person changing. */
-function sweep() {
-    elStage.classList.remove('is-sweeping');
-    void elStage.offsetWidth; // restart the animation
-    elStage.classList.add('is-sweeping');
+/** Nobody's name gets cut short. The handful that are too long for the panel
+    step down a point or two instead of ending in an ellipsis. */
+function fitName(box) {
+    const name = box.querySelector('.name');
+    box.style.removeProperty('--name-size');
+    if (name.scrollWidth <= name.clientWidth + 1) return;
+    const ratio = name.clientWidth / name.scrollWidth;
+    box.style.setProperty('--name-size', Math.max(18, Math.floor(23 * ratio)) + 'px');
 }
 
-/* ----------------------------------------------------------------------- loop */
+/** Width the panel needs for this person, worked out offscreen. */
+function widthFor(person, src) {
+    paint(elMeasure, person, src);
+    return elMeasure.offsetWidth;
+}
 
 /** Resolves once the browser source is on screen again, so an inactive scene
     doesn't silently burn through the roster. */
@@ -511,35 +469,32 @@ async function run() {
     if (SHUFFLE) shuffle(people);
 
     const first = nextPerson();
-    const firstSrc = await resolveImage(imageFor(first));
+    const firstSrc = await resolveImage(first);
 
     await document.fonts.ready; // reveal with the real font already applied
-    paint(first, firstSrc);
-    elCard.classList.add('is-lit');
-    await sleep(180); // let the glass arrive before its contents do
-    elStage.classList.add('is-showing');
-    sweep();
+
+    elCard.style.width = widthFor(first, firstSrc) + 'px';
+    paint(elCard, first, firstSrc);
+    elCard.classList.add('is-lit', 'is-showing');
 
     while (people.length > 1) {
-        // Decode the next portrait while the current person is still on screen,
-        // so the transition itself never waits on the network or the decoder.
+        // Decode the next portrait while the current person is still on screen, so
+        // the change never waits on the network or the decoder.
         const upcoming = nextPerson();
-        const upcomingSrc = await resolveImage(imageFor(upcoming));
+        const upcomingSrc = await resolveImage(upcoming);
+        const upcomingWidth = widthFor(upcoming, upcomingSrc);
 
         await sleep(HOLD_MS);
         await whenVisible();
 
-        elStage.classList.remove('is-showing');
-        elStage.classList.add('is-hiding');
+        // The panel morphs to its new width while the old details fade out, then
+        // the new ones fade in. The glass itself never leaves the screen.
+        elCard.classList.remove('is-showing');
+        elCard.style.width = upcomingWidth + 'px';
         await sleep(FADE_MS);
 
-        paint(upcoming, upcomingSrc);
-
-        elStage.classList.remove('is-hiding');
-        await sleep(20); // land on the entry pose before animating out of it
-        elStage.classList.add('is-showing');
-        sweep();
-
+        paint(elCard, upcoming, upcomingSrc);
+        elCard.classList.add('is-showing');
         await sleep(FADE_MS);
     }
 }

@@ -1,6 +1,2 @@
-node_modules/
-.DS_Store
 Thumbs.db
-.claude/
-.playwright-mcp/
-*.png
+.DS_Store
