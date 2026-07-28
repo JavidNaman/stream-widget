@@ -1,248 +1,392 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+<title>یادمان جاویدنامان</title>
+<link rel="icon" href="data:,">
 <style>
-:root {
-    --glass-bg: rgba(8, 10, 14, 0.86);
-    --glass-top: rgba(255, 255, 255, 0.07);
-    --glass-stroke: rgba(255, 255, 255, 0.22);
-    --text-main: #f7f9fc;
-    --text-subtle: #d1d8e2;
-    --accent: #f0f4fa;
+/* Bundled so the widget never depends on a font CDN being reachable from OBS. */
+@font-face {
+    font-family: 'Vazirmatn';
+    src: url('assets/vazirmatn-arabic.woff2') format('woff2');
+    font-weight: 400 700;
+    font-display: block;
+    unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0898-08E1,
+        U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74,
+        U+FE76-FEFC;
 }
+@font-face {
+    font-family: 'Vazirmatn';
+    src: url('assets/vazirmatn-latin.woff2') format('woff2');
+    font-weight: 400 700;
+    font-display: block;
+    unicode-range: U+0000-00FF, U+2000-206F, U+2212, U+FEFF, U+FFFD;
+}
+
+:root {
+    --scale: 1;
+    --fade: 700ms;
+
+    /* Sized from the data: the widest 99% of records need 392px, so 400 keeps
+       the panel calm and fixed instead of resizing on every person. */
+    --card-w: 400px;
+    --card-h: 116px;
+    --avatar: 76px;
+
+    --surface: rgba(9, 11, 15, 0.86);
+    --sheen: rgba(255, 255, 255, 0.06);
+    --stroke: rgba(255, 255, 255, 0.2);
+    --stroke-soft: rgba(255, 255, 255, 0.14);
+    --ink: #f6f8fc;
+    --ink-dim: #c3cbd8;
+    --ink-faint: #949fb0;
+}
+
+* {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    font-family: 'Vazirmatn', sans-serif;
+    background: transparent;
+    font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
     -webkit-font-smoothing: antialiased;
-    text-rendering: geometricPrecision;
 }
-#widget-wrapper {
-    display: inline-flex;
+
+/* Fixed box: every record renders at exactly the same size, so the overlay never
+   shifts or resizes between people no matter how long a name or address is. */
+#stage {
     position: relative;
-    isolation: isolate;
-    background: var(--glass-bg);
+    width: calc(var(--card-w) * var(--scale));
+    height: calc(var(--card-h) * var(--scale));
+    transform-origin: top right;
+}
+
+/* The frame fades in once and then stays put for the whole stream, so the
+   overlay never blinks. Only its contents change from person to person. */
+#card {
+    position: absolute;
+    inset: 0;
+    width: var(--card-w);
+    height: var(--card-h);
+    transform: scale(var(--scale));
+    transform-origin: top right;
+    background: var(--surface);
+    border: 1px solid var(--stroke);
+    border-radius: 22px;
     backdrop-filter: blur(14px) saturate(125%);
     -webkit-backdrop-filter: blur(14px) saturate(125%);
-    border: 1px solid var(--glass-stroke);
-    box-shadow: none !important;
-    border-radius: 22px;
-    padding: 14px 18px;
-    gap: 14px;
-    align-items: center;
     opacity: 0;
-    transition: opacity 0.9s ease-in-out;
-    width: max-content;
-    direction: rtl;
+    transition: opacity var(--fade) ease-in-out;
 }
-#widget-wrapper::before {
+
+#card::before {
     content: "";
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: linear-gradient(180deg, var(--glass-top), rgba(255, 255, 255, 0));
+    background: linear-gradient(180deg, var(--sheen), rgba(255, 255, 255, 0));
     pointer-events: none;
-    z-index: 0;
 }
-.visible {
+
+/* Fading the contents out and back in — rather than crossfading two stacked
+   cards — keeps the two people from being legible on top of each other. */
+#content {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    height: 100%;
+    padding: 16px 18px;
+    opacity: 0;
+    transition: opacity var(--fade) ease-in-out;
+    will-change: opacity;
+}
+
+.is-visible {
     opacity: 1 !important;
 }
-.avatar-box {
-    width: 78px;
-    height: 78px;
+
+.avatar {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
+    width: var(--avatar);
+    height: var(--avatar);
     border-radius: 50%;
     overflow: hidden;
-    flex-shrink: 0;
-    border: 1px solid rgba(255, 255, 255, 0.38);
-    background: rgba(0, 0, 0, 0.2);
-    box-shadow: none !important;
+    border: 1px solid var(--stroke-soft);
+    background: rgba(255, 255, 255, 0.05);
 }
-.avatar-box img {
+
+.avatar img {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
-.info-box {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    text-align: right;
-    min-width: 0;
-    max-width: 420px;
+
+.info {
     position: relative;
     z-index: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    /* Centred, so a record with no age/place/date still sits balanced in the card
+       instead of hugging the top. */
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: right;
 }
-.info-box p {
-    text-shadow: none !important;
-}
-.name-label {
+
+.name {
+    margin: 0;
     font-size: 19px;
     font-weight: 700;
-    color: var(--text-main);
-    margin: 0;
-    line-height: 1.2;
-    white-space: nowrap;
+    line-height: 1.3;
+    color: var(--ink);
+    /* Two lines then ellipsis: a handful of source records have an entire
+       eyewitness account typed into the name field. */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
-    text-overflow: ellipsis;
-    letter-spacing: 0.1px;
+    overflow-wrap: anywhere;
 }
-.detail-label {
-    font-size: 16px;
-    color: var(--text-subtle);
+
+.meta,
+.date {
     margin: 0;
-    font-weight: 400;
     line-height: 1.35;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-#info-age {
-    color: var(--accent);
-    font-weight: 500;
+
+.meta {
+    font-size: 15px;
+    color: var(--ink-dim);
 }
-.is-hidden {
+
+.date {
+    font-size: 14px;
+    color: var(--ink-faint);
+}
+
+.sep {
+    opacity: 0.45;
+    margin: 0 6px;
+}
+
+.is-empty {
     display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #card,
+    #content {
+        transition-duration: 1ms;
+    }
 }
 </style>
 </head>
 <body>
-<div id="widget-wrapper">
-    <div class="avatar-box">
-        <img id="avatar-img" src="" alt="">
-    </div>
-    <div class="info-box">
-        <p id="info-name" class="name-label"></p>
-        <p id="info-age" class="detail-label"></p>
-        <p id="info-loc" class="detail-label"></p>
-    </div>
+
+<div id="stage">
+    <article id="card">
+        <div id="content">
+            <div class="avatar"><img id="photo" alt="" decoding="async"></div>
+            <div class="info">
+                <p id="name" class="name"></p>
+                <p id="meta" class="meta"></p>
+                <p id="date" class="date"></p>
+            </div>
+        </div>
+    </article>
 </div>
+
 <script>
-let entries = [];
-let activeIdx = 0;
-let isCycling = false;
-let cycleTimer = null;
+'use strict';
 
-const DISPLAY_MS = 5000;
-const FADE_MS = 900;
+const DATA_URL = 'data.json';
+const PLACEHOLDER = 'images/_no-photo.webp';
 
-const widgetWrapper = document.getElementById('widget-wrapper');
-const avatarImg = document.getElementById('avatar-img');
-const infoName = document.getElementById('info-name');
-const infoAge = document.getElementById('info-age');
-const infoLoc = document.getElementById('info-loc');
+const params = new URLSearchParams(location.search);
 
-function preloadImage(url) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve();
-        img.onerror = reject;
-        img.src = url;
+/** Reads a numeric URL parameter, falling back when absent or nonsense.
+    Note the explicit null check — Number(null) is 0, not NaN, so without it a
+    missing parameter would silently clamp to the minimum instead. */
+function readNumber(name, fallback, min, max) {
+    const raw = params.get(name);
+    if (raw === null || raw.trim() === '') return fallback;
+    const value = Number(raw);
+    if (!Number.isFinite(value)) return fallback;
+    return Math.min(Math.max(value, min), max);
+}
+
+const DISPLAY_MS = readNumber('duration', 6000, 1000, 120000);
+const FADE_MS = readNumber('fade', 700, 0, 5000);
+const SCALE = readNumber('scale', 1, 0.4, 4);
+const SHUFFLE = params.get('order') !== 'list';
+
+document.documentElement.style.setProperty('--fade', FADE_MS + 'ms');
+document.documentElement.style.setProperty('--scale', String(SCALE));
+
+const elCard = document.getElementById('card');
+const elContent = document.getElementById('content');
+const elPhoto = document.getElementById('photo');
+const elName = document.getElementById('name');
+const elMeta = document.getElementById('meta');
+const elDate = document.getElementById('date');
+
+let people = [];
+let cursor = 0;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/* --------------------------------------------------------------- data loading */
+
+/** Fetches the roster, retrying forever so a source that starts before the
+    network is up eventually recovers on its own instead of staying blank. */
+async function loadPeople() {
+    for (let attempt = 0; ; attempt++) {
+        try {
+            const res = await fetch(DATA_URL, { cache: 'no-cache' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const parsed = await res.json();
+            if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('empty roster');
+            return parsed.filter((entry) => entry && typeof entry === 'object');
+        } catch {
+            await sleep(Math.min(1000 * 2 ** attempt, 30000));
+        }
+    }
+}
+
+/* -------------------------------------------------------------------- ordering */
+
+function shuffle(list) {
+    for (let i = list.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+}
+
+/** Walks the roster, reshuffling on each pass without ever repeating the
+    person who was just on screen across the wrap. */
+function nextPerson() {
+    if (cursor >= people.length) {
+        const last = people[people.length - 1];
+        shuffle(people);
+        if (people.length > 1 && people[0] === last) {
+            [people[0], people[1]] = [people[1], people[0]];
+        }
+        cursor = 0;
+    }
+    return people[cursor++];
+}
+
+/* --------------------------------------------------------------------- render */
+
+const imageFor = (person) => (person.photo ? 'images/' + person.id + '.jpg' : PLACEHOLDER);
+
+/** Resolves to a usable src — never rejects, so one dead image can't stall the loop. */
+function resolveImage(src) {
+    return new Promise((resolve) => {
+        const probe = new Image();
+        probe.onload = () => resolve(src);
+        probe.onerror = () => resolve(PLACEHOLDER);
+        probe.src = src;
     });
 }
 
-async function resolveImageReady(url) {
-    const safeUrl = url === null || url === undefined ? '' : String(url).trim();
-    if (!safeUrl) return { ok: false, url: '' };
-    try {
-        await preloadImage(safeUrl);
-        return { ok: true, url: safeUrl };
-    } catch {
-        return { ok: false, url: '' };
-    }
+/** Sets text, hiding the element entirely when there is nothing to show. */
+function setText(el, text) {
+    const value = text == null ? '' : String(text).trim();
+    el.textContent = value;
+    el.classList.toggle('is-empty', value === '');
 }
 
-function setOptionalText(el, value, prefix = '') {
-    const text = value === null || value === undefined ? '' : String(value).trim();
-    if (!text) {
-        el.classList.add('is-hidden');
-        el.innerText = '';
-        return;
-    }
-    el.classList.remove('is-hidden');
-    el.innerText = prefix + text;
-}
+const FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
+const toPersianDigits = (value) => String(value).replace(/[0-9]/g, (d) => FA_DIGITS[Number(d)]);
 
-async function applyData(idx, imageState = null) {
-    const current = entries[idx];
-    const resolved = imageState || await resolveImageReady(current.image_url);
+function paint(person, src) {
+    elPhoto.src = src;
+    elPhoto.alt = person.name || '';
 
-    if (resolved.ok) {
-        avatarImg.src = resolved.url;
-        avatarImg.parentElement.classList.remove('is-hidden');
-    } else {
-        avatarImg.removeAttribute('src');
-        avatarImg.parentElement.classList.add('is-hidden');
-    }
+    setText(elName, person.name || 'ناشناس');
 
-    const fullName = [current.first_name, current.last_name].filter(Boolean).join(' ').trim();
-    infoName.innerText = fullName || 'Unknown';
-    avatarImg.alt = fullName;
-    setOptionalText(infoAge, current.age, 'سن: ');
-    setOptionalText(infoLoc, current.location, 'شهر: ');
-    widgetWrapper.classList.add('visible');
-}
+    // Age and place share a line; whichever is missing simply drops out, and if
+    // both are missing the line disappears rather than leaving a gap.
+    const bits = [];
+    if (Number.isFinite(person.age)) bits.push(toPersianDigits(person.age) + ' ساله');
+    if (person.place) bits.push(person.place);
 
-function getNextIndex() {
-    const nextIdx = (activeIdx + 1) % entries.length;
-    if (nextIdx === 0) {
-        entries.sort(() => Math.random() - 0.5);
-    }
-    return nextIdx;
-}
-
-function preloadNextImage() {
-    if (entries.length < 2) return;
-    const nextIdx = getNextIndex();
-    const nextUrl = entries[nextIdx].image_url === null || entries[nextIdx].image_url === undefined
-        ? ''
-        : String(entries[nextIdx].image_url).trim();
-    if (!nextUrl) return;
-    preloadImage(nextUrl).catch(() => {});
-}
-
-function scheduleNextCycle() {
-    if (cycleTimer) {
-        clearTimeout(cycleTimer);
-    }
-    cycleTimer = setTimeout(cycleWidget, DISPLAY_MS);
-}
-
-async function cycleWidget() {
-    if (isCycling || entries.length <= 1) return;
-    isCycling = true;
-    const nextIdx = getNextIndex();
-    const nextImageState = await resolveImageReady(entries[nextIdx].image_url);
-
-    widgetWrapper.classList.remove('visible');
-    setTimeout(async () => {
-        activeIdx = nextIdx;
-        try {
-            await applyData(activeIdx, nextImageState);
-            preloadNextImage();
-        } finally {
-            isCycling = false;
-            scheduleNextCycle();
+    elMeta.replaceChildren();
+    elMeta.classList.toggle('is-empty', bits.length === 0);
+    bits.forEach((bit, index) => {
+        if (index > 0) {
+            const sep = document.createElement('span');
+            sep.className = 'sep';
+            sep.textContent = '·';
+            elMeta.append(sep);
         }
-    }, FADE_MS);
+        elMeta.append(document.createTextNode(bit));
+    });
+
+    setText(elDate, person.date);
 }
 
-async function fetchData() {
-    try {
-        const req = await fetch('https://raw.githubusercontent.com/JavidNaman/stream-widget/main/data.json');
-        const rawData = await req.json();
-        if (Array.isArray(rawData) && rawData.length > 0) {
-            entries = rawData.sort(() => Math.random() - 0.5);
-            await applyData(activeIdx);
-            preloadNextImage();
-            scheduleNextCycle();
-        }
-    } catch {}
+/* ----------------------------------------------------------------------- loop */
+
+/** Resolves once the browser source is on screen again, so an inactive scene
+    doesn't silently burn through the roster. */
+function whenVisible() {
+    if (!document.hidden) return Promise.resolve();
+    return new Promise((resolve) => {
+        document.addEventListener('visibilitychange', function onChange() {
+            if (document.hidden) return;
+            document.removeEventListener('visibilitychange', onChange);
+            resolve();
+        });
+    });
 }
 
-fetchData();
+async function run() {
+    people = await loadPeople();
+    if (SHUFFLE) shuffle(people);
+
+    const first = nextPerson();
+    const firstSrc = await resolveImage(imageFor(first));
+
+    await document.fonts.ready; // reveal with the real font already applied
+    paint(first, firstSrc);
+    elCard.classList.add('is-visible');
+    elContent.classList.add('is-visible');
+
+    while (people.length > 1) {
+        // Resolve the next portrait while the current person is still on screen,
+        // so the transition itself never waits on the network.
+        const upcoming = nextPerson();
+        const upcomingSrc = await resolveImage(imageFor(upcoming));
+
+        await sleep(DISPLAY_MS);
+        await whenVisible();
+
+        elContent.classList.remove('is-visible');
+        await sleep(FADE_MS);
+
+        paint(upcoming, upcomingSrc);
+        elContent.classList.add('is-visible');
+        await sleep(FADE_MS);
+    }
+}
+
+run();
 </script>
 </body>
 </html>
