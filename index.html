@@ -25,7 +25,10 @@
 
 :root {
     --scale: 1;
-    --fade: 700ms;
+    /* Details leave quickly and arrive gently, which shortens the moment the
+       panel holds nothing and makes the change feel prompt rather than slow. */
+    --fade: 380ms;
+    --fade-out: 220ms;
 
     --h: 112px;
     --avatar: 76px;
@@ -34,11 +37,11 @@
     /* Painted rather than sampled, so it has to stay dark enough for white text
        to survive over a blown-out shot as well as a dark one. */
     --tint: 18, 20, 26;
-    --tint-alpha: 0.62;
+    --tint-alpha: 0.72;
 
     --ink: #ffffff;
-    --ink-dim: rgba(255, 255, 255, 0.86);
-    --ink-faint: rgba(255, 255, 255, 0.68);
+    --ink-dim: rgba(255, 255, 255, 0.94);
+    --ink-faint: rgba(255, 255, 255, 0.80);
 
     --blur: 6px;
 
@@ -93,6 +96,9 @@ body {
     right: 0;
     width: max-content;
     border-radius: calc(var(--h) / 2);
+    /* While the panel resizes, the outgoing details keep their own width and are
+       wiped by the moving edge instead of being squeezed into an ellipsis. */
+    overflow: hidden;
     transform: scale(var(--scale));
     transform-origin: top right;
 
@@ -110,7 +116,7 @@ body {
     /* The panel arrives once and then stays put for the whole stream. Afterwards
        only its width changes, morphing to fit whoever is next. */
     transition:
-        opacity 900ms ease-in-out,
+        opacity 600ms ease-in-out,
         width var(--morph) var(--ease-morph),
         padding-inline-start var(--morph) var(--ease-morph);
 }
@@ -160,15 +166,18 @@ body {
     opacity: 0;
     filter: blur(var(--blur));
     transition:
-        opacity var(--fade) var(--ease),
-        filter var(--fade) var(--ease);
+        opacity var(--fade-out) var(--ease),
+        filter var(--fade-out) var(--ease);
     will-change: opacity, filter;
 }
 
+/* Duration declared on the destination state, so entering is slower than
+   leaving without needing two sets of rules. */
 #card.is-showing .avatar,
 #card.is-showing .info {
     opacity: 1;
     filter: blur(0px);
+    transition-duration: var(--fade);
 }
 
 .avatar {
@@ -211,11 +220,14 @@ body {
     pointer-events: none;
 }
 
+/* Width is written by JS from the ruler, so the lines never resize with the
+   panel and so can never be clipped by it mid-animation. */
 .info {
     display: flex;
     flex-direction: column;
     justify-content: center;
     gap: 2px;
+    flex: 0 0 auto;
     min-width: 0;
     text-align: right;
 }
@@ -230,10 +242,19 @@ body {
 }
 
 .name {
-    font-size: var(--name-size, 23px);
+    font-size: var(--name-size, 22px);
     font-weight: 700;
     line-height: 1.3;
     color: var(--ink);
+}
+
+/* A label in front of the name, not part of it: sized in em so it shrinks with
+   the name, and held back in weight and colour so the name still reads first. */
+.honorific {
+    font-size: 0.6em;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.62);
+    margin-inline-end: 8px;
 }
 
 .meta {
@@ -259,7 +280,7 @@ body {
 
 @media (prefers-reduced-transparency: reduce) {
     :root {
-        --tint-alpha: 0.94;
+        --tint-alpha: 0.96;
     }
 }
 
@@ -289,7 +310,7 @@ body {
 <div id="card" class="box">
     <div class="avatar"><img alt="" decoding="async"></div>
     <div class="info">
-        <p class="name"></p>
+        <p class="name"><span class="honorific">جاویدنام</span><span class="given"></span></p>
         <p class="meta"></p>
         <p class="date"></p>
     </div>
@@ -298,7 +319,7 @@ body {
 <div id="measure" class="box" aria-hidden="true">
     <div class="avatar"></div>
     <div class="info">
-        <p class="name"></p>
+        <p class="name"><span class="honorific">جاویدنام</span><span class="given"></span></p>
         <p class="meta"></p>
         <p class="date"></p>
     </div>
@@ -322,26 +343,40 @@ function readNumber(name, fallback, min, max) {
     return Math.min(Math.max(value, min), max);
 }
 
+const root = document.documentElement;
+
+/** Reads a length declared in the stylesheet, so a value the CSS owns is never
+    also hard-coded here where the two could drift apart. */
+function cssPixels(name, fallback) {
+    const value = parseFloat(getComputedStyle(root).getPropertyValue(name));
+    return Number.isFinite(value) ? value : fallback;
+}
+
+const DEFAULT_FADE = cssPixels('--fade', 520);
+const DEFAULT_GLASS = parseFloat(getComputedStyle(root).getPropertyValue('--tint-alpha')) || 0.62;
+const MAX_W = cssPixels('--max-w', 470);
+const NAME_SIZE = parseFloat(getComputedStyle(document.querySelector('#card .name')).fontSize) || 22;
+
 const HOLD_MS = readNumber('duration', 6000, 1200, 120000);
-const FADE_MS = readNumber('fade', 520, 0, 4000);
-const MORPH_MIN = 380;
-const MORPH_MAX = 820;
-const MAX_W = 470;   // matches --max-w
+const FADE_MS = readNumber('fade', DEFAULT_FADE, 0, 4000);
 const SCALE = readNumber('scale', 1, 0.4, 4);
 const SHUFFLE = params.get('order') !== 'list';
 
-const root = document.documentElement;
+
+const FADE_OUT_MS = Math.round(FADE_MS * 0.58);
 root.style.setProperty('--fade', FADE_MS + 'ms');
+root.style.setProperty('--fade-out', FADE_OUT_MS + 'ms');
 root.style.setProperty('--scale', String(SCALE));
 
 // Only written when asked for, so leaving it alone keeps the reduced-transparency
 // and high-contrast rules in charge of how dense the glass is.
 if (params.has('glass')) {
-    root.style.setProperty('--tint-alpha', String(readNumber('glass', 0.62, 0.25, 0.95)));
+    root.style.setProperty('--tint-alpha', String(readNumber('glass', DEFAULT_GLASS, 0.25, 0.95)));
 }
 
 const elCard = document.getElementById('card');
 const elMeasure = document.getElementById('measure');
+const elInfo = elCard.querySelector('.info');
 
 let people = [];
 let cursor = 0;
@@ -441,7 +476,9 @@ function paint(box, person, src, nameSize) {
     // The pixels are swapped by showPortrait, which can wait for the decode.
     if (image) image.alt = src ? (person.name || '') : '';
 
-    setText(box.querySelector('.name'), person.name || 'ناشناس');
+    // Only the given name is written; the honorific in front of it is markup and
+    // stays where it is.
+    box.querySelector('.given').textContent = person.name || 'ناشناس';
 
     // Age and place share a line; whichever is missing drops out, and if both are
     // missing the line disappears rather than leaving a gap.
@@ -479,7 +516,7 @@ function fitName(box) {
     box.style.removeProperty('--name-size');
     if (name.scrollWidth <= name.clientWidth + 1) return null;
     const ratio = name.clientWidth / name.scrollWidth;
-    const size = Math.max(18, Math.floor(23 * ratio)) + 'px';
+    const size = Math.max(17, Math.floor(NAME_SIZE * ratio)) + 'px';
     box.style.setProperty('--name-size', size);
     return size;
 }
@@ -503,6 +540,7 @@ function ensureFits() {
         const short = shortfall(elCard);
         if (!short) return;
         const wider = Math.min(MAX_W, elCard.offsetWidth + short + 2);
+        elInfo.style.width = (elInfo.getBoundingClientRect().width + short + 2) + 'px';
         if (wider <= elCard.offsetWidth) break;
         elCard.style.setProperty('--morph', '0ms');
         elCard.style.width = wider + 'px';
@@ -513,33 +551,17 @@ function ensureFits() {
 /** How the panel should be laid out for this person, worked out offscreen at the
     final width so nothing has to be measured against a moving target. */
 function measure(person, src) {
+    elMeasure.querySelector('.info').style.removeProperty('width');
     paint(elMeasure, person, src);
+    const nameSize = fitName(elMeasure);
     // offsetWidth is a whole number but the layout underneath is not, so a panel
     // built to the reported width can land a fraction of a pixel short and clip
     // the very text it was measured from. Two pixels covers the rounding.
-    return { width: elMeasure.offsetWidth + 2, nameSize: fitName(elMeasure) };
-}
-
-/** Resolves when the panel has actually finished resizing. A timer of the same
-    length is not the same thing: it can fire while the last few pixels are still
-    animating, and a name painted into a panel that is a hair too narrow shows up
-    clipped for the length of the fade. The timeout is only a backstop for when
-    the width does not change at all and no event is coming. */
-function afterResize(fallbackMs) {
-    return new Promise((resolve) => {
-        let settled = false;
-        const finish = () => {
-            if (settled) return;
-            settled = true;
-            elCard.removeEventListener('transitionend', onEnd);
-            resolve();
-        };
-        const onEnd = (event) => {
-            if (event.target === elCard && event.propertyName === 'width') finish();
-        };
-        elCard.addEventListener('transitionend', onEnd);
-        setTimeout(finish, fallbackMs + 150);
-    });
+    return {
+        width: Math.min(MAX_W, elMeasure.offsetWidth + 2),
+        infoWidth: Math.ceil(elMeasure.querySelector('.info').getBoundingClientRect().width) + 2,
+        nameSize,
+    };
 }
 
 /** Resolves once the browser source is on screen again, so an inactive scene
@@ -574,55 +596,61 @@ async function run() {
     ]).catch(() => {});
     await document.fonts.ready;
 
+    // The opening card must not be held hostage by one portrait. On a slow link
+    // a stalled image would leave the overlay blank for as long as it took; past
+    // this point the first person is simply shown without a photo, and the panel
+    // closes up around the name exactly as it does for anyone who has none.
     const first = nextPerson();
-    const firstSrc = await prefetchImage(first);
+    const firstSrc = await Promise.race([prefetchImage(first), sleep(1200).then(() => null)]);
     const firstLayout = measure(first, firstSrc);
 
     // No transition on the opening width, or the name would be laid out against
     // a panel that is still growing into place.
     elCard.style.setProperty('--morph', '0ms');
     elCard.style.width = firstLayout.width + 'px';
+    elInfo.style.width = firstLayout.infoWidth + 'px';
     paint(elCard, first, firstSrc, firstLayout.nameSize);
-    await showPortrait(firstSrc);
     ensureFits();
+    await showPortrait(firstSrc);
     elCard.style.removeProperty('--morph');
     elCard.classList.add('is-lit', 'is-showing');
 
     while (people.length > 1) {
-        // Work the next person out while the current one is still on screen, so
-        // the change never waits on the network or the decoder.
-        const upcoming = nextPerson();
-        const upcomingSrc = await prefetchImage(upcoming);
-        const { width: upcomingWidth, nameSize } = measure(upcoming, upcomingSrc);
-
-        await sleep(HOLD_MS);
-        await whenVisible();
-
-        // A jump of 300px and a jump of 20px can't share one duration — the big
-        // one reads as a lurch. Give the resize a length that matches how far it
-        // actually travels.
-        const travel = Math.abs(upcomingWidth - elCard.offsetWidth);
-        const morphMs = Math.min(MORPH_MAX, MORPH_MIN + travel * 1.1);
-
-        // Three beats, in this order for a reason. Resizing while the outgoing
-        // details are still legible squeezes them into an ellipsis mid-move, so
-        // the panel only changes width once there is nothing left to squeeze.
-        elCard.classList.remove('is-showing');
-        await sleep(FADE_MS);
-
-        elCard.style.setProperty('--morph', morphMs + 'ms');
-        elCard.style.width = upcomingWidth + 'px';
-        await afterResize(morphMs);
-
-        // Laid out at the settled width, and the portrait is not revealed until
-        // the element itself is ready to paint it.
-        paint(elCard, upcoming, upcomingSrc, nameSize);
-        // Last check against the real panel, while the card is still invisible.
-        ensureFits();
-        await showPortrait(upcomingSrc);
-        elCard.classList.add('is-showing');
-        await sleep(FADE_MS);
+        // This runs unattended for hours, so one unreadable record must not be
+        // able to end the stream's memorial. Anything unexpected costs that
+        // person their turn and nothing more.
+        try {
+            await showNext();
+        } catch {
+            await sleep(1000);
+        }
     }
+}
+
+async function showNext() {
+    // Work the next person out while the current one is still on screen, so the
+    // change never waits on the network or the decoder.
+    const upcoming = nextPerson();
+    const upcomingSrc = await prefetchImage(upcoming);
+    const layout = measure(upcoming, upcomingSrc);
+
+    await sleep(HOLD_MS);
+    await whenVisible();
+
+    // The panel resizes while the old details are fading, not in a gap of its
+    // own afterwards — that gap was a visible pause with an empty pill in it.
+    // By the time the next person is painted the panel is already their size.
+    elCard.classList.remove('is-showing');
+    elCard.style.setProperty('--morph', FADE_OUT_MS + 'ms');
+    elCard.style.width = layout.width + 'px';
+    await sleep(FADE_OUT_MS);
+
+    paint(elCard, upcoming, upcomingSrc, layout.nameSize);
+    elInfo.style.width = layout.infoWidth + 'px';
+    ensureFits();
+    await showPortrait(upcomingSrc);
+    elCard.classList.add('is-showing');
+    await sleep(FADE_MS);
 }
 
 run();
