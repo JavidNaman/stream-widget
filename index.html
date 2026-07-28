@@ -40,7 +40,13 @@
     --ink-dim: rgba(255, 255, 255, 0.86);
     --ink-faint: rgba(255, 255, 255, 0.68);
 
-    --ease: cubic-bezier(0.32, 0.72, 0, 1);
+    --blur: 6px;
+
+    /* Content easing leads out and settles in. The panel resizes on a gentler,
+       symmetric curve — a front-loaded one makes a large change snap. */
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-morph: cubic-bezier(0.45, 0.05, 0.2, 1);
+    --morph: 520ms;
 }
 
 * {
@@ -105,8 +111,8 @@ body {
        only its width changes, morphing to fit whoever is next. */
     transition:
         opacity 900ms ease-in-out,
-        width var(--fade) var(--ease),
-        padding-inline-start var(--fade) var(--ease);
+        width var(--morph) var(--ease-morph),
+        padding-inline-start var(--morph) var(--ease-morph);
 }
 
 #card.is-lit {
@@ -147,17 +153,22 @@ body {
     pointer-events: none;
 }
 
-/* Only the contents change from person to person. */
+/* Only the contents change from person to person: they fall out of focus and
+   the next person resolves back into it. */
 .avatar,
 .info {
     opacity: 0;
-    transition: opacity var(--fade) ease-in-out;
-    will-change: opacity;
+    filter: blur(var(--blur));
+    transition:
+        opacity var(--fade) var(--ease),
+        filter var(--fade) var(--ease);
+    will-change: opacity, filter;
 }
 
 #card.is-showing .avatar,
 #card.is-showing .info {
     opacity: 1;
+    filter: blur(0px);
 }
 
 .avatar {
@@ -261,6 +272,10 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    :root {
+        --blur: 0px;
+    }
+
     #card,
     .avatar,
     .info {
@@ -308,7 +323,9 @@ function readNumber(name, fallback, min, max) {
 }
 
 const HOLD_MS = readNumber('duration', 6000, 1200, 120000);
-const FADE_MS = readNumber('fade', 700, 0, 4000);
+const FADE_MS = readNumber('fade', 520, 0, 4000);
+const MORPH_MIN = 380;
+const MORPH_MAX = 820;
 const SCALE = readNumber('scale', 1, 0.4, 4);
 const SHUFFLE = params.get('order') !== 'list';
 
@@ -487,12 +504,24 @@ async function run() {
         await sleep(HOLD_MS);
         await whenVisible();
 
-        // The panel morphs to its new width while the old details fade out, then
-        // the new ones fade in. The glass itself never leaves the screen.
+        // A jump of 300px and a jump of 20px can't share one duration — the big
+        // one reads as a lurch. Give the resize a length that matches how far it
+        // actually travels.
+        const travel = Math.abs(upcomingWidth - elCard.offsetWidth);
+        const morphMs = Math.min(MORPH_MAX, MORPH_MIN + travel * 1.1);
+
+        // Three beats, in this order for a reason. Resizing while the outgoing
+        // details are still legible squeezes them into an ellipsis mid-move, so
+        // the panel only changes width once there is nothing left to squeeze.
         elCard.classList.remove('is-showing');
-        elCard.style.width = upcomingWidth + 'px';
         await sleep(FADE_MS);
 
+        elCard.style.setProperty('--morph', morphMs + 'ms');
+        elCard.style.width = upcomingWidth + 'px';
+        await sleep(morphMs);
+
+        // Painted at the settled width, so the name is measured against the box
+        // it will actually occupy.
         paint(elCard, upcoming, upcomingSrc);
         elCard.classList.add('is-showing');
         await sleep(FADE_MS);
