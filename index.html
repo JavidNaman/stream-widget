@@ -385,19 +385,38 @@ function nextPerson() {
     return people[cursor++];
 }
 
-/** Resolves to a fully decoded portrait, or null when there is none to show.
-    Waiting on decode here — rather than just assigning src — is what stops a
-    slow image from appearing a beat after the name it belongs to. */
-async function resolveImage(person) {
+/** Warms the cache for a portrait and reports whether it is usable at all.
+    Decoding a detached Image only gets the bytes in; the element on screen still
+    has to load and decode them itself, which is what showPortrait waits for. */
+async function prefetchImage(person) {
     if (!person.photo) return null;
     const src = 'images/' + person.id + '.jpg';
-    const image = new Image();
-    image.src = src;
+    const probe = new Image();
+    probe.src = src;
     try {
-        await image.decode();
+        await probe.decode();
         return src;
     } catch {
         return null;
+    }
+}
+
+/** Points the on-screen portrait at `src` and resolves only once that element is
+    ready to paint it. Without this the card can spend a frame or two still
+    showing the previous person's photo beside the new person's name. */
+async function showPortrait(src) {
+    const image = elCard.querySelector('img');
+    if (!src) {
+        image.removeAttribute('src');
+        return false;
+    }
+    image.src = src;
+    try {
+        await image.decode();
+        return true;
+    } catch {
+        image.removeAttribute('src');
+        return false;
     }
 }
 
@@ -412,20 +431,14 @@ const FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 const toPersianDigits = (value) => String(value).replace(/[0-9]/g, (d) => FA_DIGITS[Number(d)]);
 
 /** Lays a person out inside `box` — either the visible card or the ruler. */
-function paint(box, person, src) {
+function paint(box, person, src, nameSize) {
     const avatar = box.querySelector('.avatar');
     const image = avatar.querySelector('img');
 
     avatar.classList.toggle('is-empty', !src);
     box.classList.toggle('no-photo', !src);
-    if (image) {
-        if (src) {
-            image.src = src;
-            image.alt = person.name || '';
-        } else {
-            image.removeAttribute('src');
-        }
-    }
+    // The pixels are swapped by showPortrait, which can wait for the decode.
+    if (image) image.alt = src ? (person.name || '') : '';
 
     setText(box.querySelector('.name'), person.name || 'ناشناس');
 
@@ -449,23 +462,32 @@ function paint(box, person, src) {
     });
 
     setText(box.querySelector('.date'), person.date);
-    fitName(box);
+
+    if (nameSize) box.style.setProperty('--name-size', nameSize);
+    else box.style.removeProperty('--name-size');
 }
 
-/** Nobody's name gets cut short. The handful that are too long for the panel
-    step down a point or two instead of ending in an ellipsis. */
+/** Nobody's name gets cut short. The handful too long for the panel step down a
+    point or two instead of ending in an ellipsis.
+
+    This is measured on the ruler and never on the card, because the card's width
+    is often mid-animation — measuring against it sized the very first name
+    against an empty 52px panel and cropped it. */
 function fitName(box) {
     const name = box.querySelector('.name');
     box.style.removeProperty('--name-size');
-    if (name.scrollWidth <= name.clientWidth + 1) return;
+    if (name.scrollWidth <= name.clientWidth + 1) return null;
     const ratio = name.clientWidth / name.scrollWidth;
-    box.style.setProperty('--name-size', Math.max(18, Math.floor(23 * ratio)) + 'px');
+    const size = Math.max(18, Math.floor(23 * ratio)) + 'px';
+    box.style.setProperty('--name-size', size);
+    return size;
 }
 
-/** Width the panel needs for this person, worked out offscreen. */
-function widthFor(person, src) {
+/** How the panel should be laid out for this person, worked out offscreen at the
+    final width so nothing has to be measured against a moving target. */
+function measure(person, src) {
     paint(elMeasure, person, src);
-    return elMeasure.offsetWidth;
+    return { width: elMeasure.offsetWidth, nameSize: fitName(elMeasure) };
 }
 
 /** Resolves once the browser source is on screen again, so an inactive scene
@@ -486,20 +508,26 @@ async function run() {
     if (SHUFFLE) shuffle(people);
 
     const first = nextPerson();
-    const firstSrc = await resolveImage(first);
+    const firstSrc = await prefetchImage(first);
+    const firstLayout = measure(first, firstSrc);
 
     await document.fonts.ready; // reveal with the real font already applied
 
-    elCard.style.width = widthFor(first, firstSrc) + 'px';
-    paint(elCard, first, firstSrc);
+    // No transition on the opening width, or the name would be laid out against
+    // a panel that is still growing into place.
+    elCard.style.setProperty('--morph', '0ms');
+    elCard.style.width = firstLayout.width + 'px';
+    paint(elCard, first, firstSrc, firstLayout.nameSize);
+    await showPortrait(firstSrc);
+    elCard.style.removeProperty('--morph');
     elCard.classList.add('is-lit', 'is-showing');
 
     while (people.length > 1) {
-        // Decode the next portrait while the current person is still on screen, so
+        // Work the next person out while the current one is still on screen, so
         // the change never waits on the network or the decoder.
         const upcoming = nextPerson();
-        const upcomingSrc = await resolveImage(upcoming);
-        const upcomingWidth = widthFor(upcoming, upcomingSrc);
+        const upcomingSrc = await prefetchImage(upcoming);
+        const { width: upcomingWidth, nameSize } = measure(upcoming, upcomingSrc);
 
         await sleep(HOLD_MS);
         await whenVisible();
@@ -520,9 +548,10 @@ async function run() {
         elCard.style.width = upcomingWidth + 'px';
         await sleep(morphMs);
 
-        // Painted at the settled width, so the name is measured against the box
-        // it will actually occupy.
-        paint(elCard, upcoming, upcomingSrc);
+        // Laid out at the settled width, and the portrait is not revealed until
+        // the element itself is ready to paint it.
+        paint(elCard, upcoming, upcomingSrc, nameSize);
+        await showPortrait(upcomingSrc);
         elCard.classList.add('is-showing');
         await sleep(FADE_MS);
     }
