@@ -326,6 +326,7 @@ const HOLD_MS = readNumber('duration', 6000, 1200, 120000);
 const FADE_MS = readNumber('fade', 520, 0, 4000);
 const MORPH_MIN = 380;
 const MORPH_MAX = 820;
+const MAX_W = 470;   // matches --max-w
 const SCALE = readNumber('scale', 1, 0.4, 4);
 const SHUFFLE = params.get('order') !== 'list';
 
@@ -483,11 +484,62 @@ function fitName(box) {
     return size;
 }
 
+/** How many pixels short the widest line in `box` is, or 0 if everything fits. */
+function shortfall(box) {
+    let worst = 0;
+    for (const line of box.querySelectorAll('.info > p')) {
+        if (line.classList.contains('is-empty')) continue;
+        worst = Math.max(worst, line.scrollWidth - line.clientWidth);
+    }
+    return worst > 1 ? worst : 0;
+}
+
+/** Final guarantee that nothing on the card ends in an ellipsis. Widens the
+    panel to cover any shortfall, and only if it is already at its limit does it
+    fall back to stepping the name down. Costs nothing when everything fits,
+    which is the normal case. */
+function ensureFits() {
+    for (let pass = 0; pass < 3; pass++) {
+        const short = shortfall(elCard);
+        if (!short) return;
+        const wider = Math.min(MAX_W, elCard.offsetWidth + short + 2);
+        if (wider <= elCard.offsetWidth) break;
+        elCard.style.setProperty('--morph', '0ms');
+        elCard.style.width = wider + 'px';
+    }
+    if (shortfall(elCard)) fitName(elCard);
+}
+
 /** How the panel should be laid out for this person, worked out offscreen at the
     final width so nothing has to be measured against a moving target. */
 function measure(person, src) {
     paint(elMeasure, person, src);
-    return { width: elMeasure.offsetWidth, nameSize: fitName(elMeasure) };
+    // offsetWidth is a whole number but the layout underneath is not, so a panel
+    // built to the reported width can land a fraction of a pixel short and clip
+    // the very text it was measured from. Two pixels covers the rounding.
+    return { width: elMeasure.offsetWidth + 2, nameSize: fitName(elMeasure) };
+}
+
+/** Resolves when the panel has actually finished resizing. A timer of the same
+    length is not the same thing: it can fire while the last few pixels are still
+    animating, and a name painted into a panel that is a hair too narrow shows up
+    clipped for the length of the fade. The timeout is only a backstop for when
+    the width does not change at all and no event is coming. */
+function afterResize(fallbackMs) {
+    return new Promise((resolve) => {
+        let settled = false;
+        const finish = () => {
+            if (settled) return;
+            settled = true;
+            elCard.removeEventListener('transitionend', onEnd);
+            resolve();
+        };
+        const onEnd = (event) => {
+            if (event.target === elCard && event.propertyName === 'width') finish();
+        };
+        elCard.addEventListener('transitionend', onEnd);
+        setTimeout(finish, fallbackMs + 150);
+    });
 }
 
 /** Resolves once the browser source is on screen again, so an inactive scene
@@ -507,11 +559,24 @@ async function run() {
     people = await loadPeople();
     if (SHUFFLE) shuffle(people);
 
+    // Every width on this card is measured, so the real font has to be in place
+    // before any measuring happens — Vazirmatn is wider than the fallback, and a
+    // panel measured in the fallback is built too narrow for the name it holds.
+    //
+    // Asking for fonts.ready alone is not enough: at this point nothing on the
+    // page has any text in it, so the browser has not requested the font yet and
+    // ready resolves immediately against an empty page. These load calls demand
+    // the faces outright, with Persian sample text so the Arabic subset — the one
+    // that actually renders these names — is the one that gets fetched.
+    await Promise.all([
+        document.fonts.load('700 23px Vazirmatn', 'آزمایش'),
+        document.fonts.load('400 17px Vazirmatn', 'آزمایش'),
+    ]).catch(() => {});
+    await document.fonts.ready;
+
     const first = nextPerson();
     const firstSrc = await prefetchImage(first);
     const firstLayout = measure(first, firstSrc);
-
-    await document.fonts.ready; // reveal with the real font already applied
 
     // No transition on the opening width, or the name would be laid out against
     // a panel that is still growing into place.
@@ -519,6 +584,7 @@ async function run() {
     elCard.style.width = firstLayout.width + 'px';
     paint(elCard, first, firstSrc, firstLayout.nameSize);
     await showPortrait(firstSrc);
+    ensureFits();
     elCard.style.removeProperty('--morph');
     elCard.classList.add('is-lit', 'is-showing');
 
@@ -546,11 +612,13 @@ async function run() {
 
         elCard.style.setProperty('--morph', morphMs + 'ms');
         elCard.style.width = upcomingWidth + 'px';
-        await sleep(morphMs);
+        await afterResize(morphMs);
 
         // Laid out at the settled width, and the portrait is not revealed until
         // the element itself is ready to paint it.
         paint(elCard, upcoming, upcomingSrc, nameSize);
+        // Last check against the real panel, while the card is still invisible.
+        ensureFits();
         await showPortrait(upcomingSrc);
         elCard.classList.add('is-showing');
         await sleep(FADE_MS);
