@@ -247,6 +247,11 @@ ol.steps code, .steps kbd {
     </section>
 
     <section>
+        <h2>جای ویجت</h2>
+        <div class="row" id="aligns"></div>
+    </section>
+
+    <section>
         <h2>تنظیم‌ها</h2>
         <div class="grid">
             <label class="field">
@@ -262,11 +267,12 @@ ol.steps code, .steps kbd {
                 <input type="range" id="glass" min="0" max="0.9" step="0.01">
             </label>
             <div class="field" id="accentField">
-                <span>رنگ نوار کناری <b id="accentOut"></b></span>
+                <span>نوار کناری <b id="accentOut"></b></span>
                 <div class="colour">
                     <input type="color" id="accent">
                     <label class="chip" style="padding:8px 14px"><input type="checkbox" id="accentOff">بدون نوار</label>
                 </div>
+                <div class="row" id="sides" style="margin-top:2px"></div>
             </div>
         </div>
     </section>
@@ -325,7 +331,7 @@ const DEFAULTS = {
 };
 const ACCENT_DEFAULT = '#c2333a';
 
-const state = { theme: 'dark', accent: ACCENT_DEFAULT, accentOff: false, ...DEFAULTS.dark };
+const state = { theme: 'dark', accent: ACCENT_DEFAULT, accentOff: false, align: 'right', side: 'right', ...DEFAULTS.dark };
 let scene = 0;
 let frameUrl = '';
 let frameTimer = null;
@@ -369,9 +375,11 @@ function buildUrl() {
     if (state.duration !== d.duration) q.set('duration', state.duration);
     if (state.fade !== d.fade) q.set('fade', state.fade);
     if (Math.abs(state.glass - d.glass) > 0.001) q.set('glass', state.glass);
+    if (state.align !== 'right') q.set('align', state.align);
     if (state.theme === 'bar') {
         if (state.accentOff) q.set('accent', 'none');
         else if (state.accent.toLowerCase() !== ACCENT_DEFAULT) q.set('accent', state.accent.replace('#', ''));
+        if (!state.accentOff && state.side !== state.align) q.set('side', state.side);
     }
     const query = q.toString();
     return base + (query ? '?' + query : '');
@@ -383,6 +391,15 @@ function render() {
         Object.assign(state, DEFAULTS[v]);
     });
     chips($('anims'), ANIMS, 'anim', () => state.anim, (v) => { state.anim = v; });
+    chips($('aligns'), [{ id: 'right', label: 'راست تصویر' }, { id: 'left', label: 'چپ تصویر' }],
+          'align', () => state.align, (v) => {
+              // The accent sits on the anchored edge by default, so moving the
+              // widget moves it too unless it was deliberately put elsewhere.
+              if (state.side === state.align) state.side = v;
+              state.align = v;
+          });
+    chips($('sides'), [{ id: 'right', label: 'راست' }, { id: 'left', label: 'چپ' }],
+          'side', () => state.side, (v) => { state.side = v; });
 
     $('duration').value = state.duration;
     $('fade').value = state.fade;
@@ -432,7 +449,7 @@ $('copy').addEventListener('click', async () => {
 });
 $('open').addEventListener('click', () => window.open($('url').value, '_blank', 'noopener'));
 $('reset').addEventListener('click', () => {
-    Object.assign(state, { theme: 'dark', accent: ACCENT_DEFAULT, accentOff: false, ...DEFAULTS.dark });
+    Object.assign(state, { theme: 'dark', accent: ACCENT_DEFAULT, accentOff: false, align: 'right', side: 'right', ...DEFAULTS.dark });
     scene = 0;
     render();
 });

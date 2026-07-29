@@ -107,6 +107,19 @@ if (params.has('glass')) {
 }
 if (ACCENT_OFF) elCard.dataset.accent = 'none';
 
+// Which corner the panel is pinned to. It grows away from that corner, and the
+// wipe opens out of it, so a left-aligned widget sits on the left of the shot.
+if (params.get('align') === 'left') {
+    elCard.dataset.align = 'left';
+    elMeasure.dataset.align = 'left';
+}
+
+// Which edge of the bar carries the accent. It follows the anchored corner by
+// default; ?side= names the edge a viewer would point at.
+const side = params.get('side');
+if (side === 'left') elCard.style.setProperty('--accent-side', 'right');
+else if (side === 'right') elCard.style.setProperty('--accent-side', 'left');
+
 
 let people = [];
 let cursor = 0;
@@ -336,23 +349,24 @@ async function showNext() {
     await sleep(HOLD_MS);
     await whenVisible();
 
-    if (MOTION === 'wipe') {
+    if (MOTION.startsWith('wipe')) {
         // Closes fully before the next person goes in.
         elCard.style.setProperty('--morph', FADE_MS + 'ms');
         elCard.classList.add('is-shut');
-        elCard.style.width = '0px';
-        await sleep(FADE_MS + 60);
+        await sleep(FADE_MS + 40);
 
+        // Resized while clipped, so the change is never visible.
+        elCard.style.setProperty('--morph', '0ms');
+        elCard.style.width = layout.width + 'px';
         paint(elCard, upcoming, upcomingSrc, layout.nameSize);
         elInfo.style.width = layout.infoWidth + 'px';
+        ensureFits();
         await showPortrait(upcomingSrc);
-        // A beat shut, so it reads as closed rather than bounced.
         await sleep(140);
 
+        elCard.style.setProperty('--morph', FADE_MS + 'ms');
         elCard.classList.remove('is-shut');
-        elCard.style.width = layout.width + 'px';
         await sleep(FADE_MS);
-        ensureFits();
         return;
     }
 

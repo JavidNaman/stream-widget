@@ -64,28 +64,47 @@ body {
 
 /* Shared by the card and the ruler that measures the next person. */
 .box {
+    --radius: calc(var(--h) / 2);
     display: flex;
     align-items: center;
     gap: 16px;
     height: var(--h);
     max-width: var(--max-w);
-    /* The end side is where the capsule curves away from the text. */
-    padding-inline-start: 18px;
-    padding-inline-end: 34px;
+    /* Named by what sits against them: the text side is wider because that is
+       where the capsule curves away. */
+    --pad-portrait: 18px;
+    --pad-text: 34px;
+    padding-inline-start: var(--pad-portrait);
+    padding-inline-end: var(--pad-text);
 }
 
 /* Without a portrait the text would sit against the curve. */
 .box.no-photo {
-    padding-inline-start: 32px;
+    --pad-portrait: 32px;
 }
 
-/* Anchored top-right, so the portrait stays where it was placed. */
+/* Anchored left, the panel reads the other way round: portrait on the left. */
+#card[data-align="left"] {
+    flex-direction: row-reverse;
+    /* The portrait has moved to the other end, so the padding follows it. */
+    padding-inline-start: var(--pad-text);
+    padding-inline-end: var(--pad-portrait);
+    /* The accent follows the anchored edge unless ?side= says otherwise. */
+    --accent-side: right;
+}
+
+#card[data-align="left"] .info {
+    text-align: left;
+}
+
+/* Anchored to one top corner, so the panel grows away from it and the portrait
+   stays exactly where it was placed. */
 #card {
     position: absolute;
     top: 0;
     right: 0;
     width: max-content;
-    border-radius: calc(var(--h) / 2);
+    border-radius: var(--radius);
     /* Lets the moving edge wipe the outgoing details rather than squeeze them. */
     overflow: hidden;
     transform: scale(var(--scale));
@@ -98,11 +117,13 @@ body {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
 
     opacity: 0;
-    /* Arrives once, then only its width changes. */
+    clip-path: inset(0 round var(--radius));
+    /* Padding is deliberately not animated: it changes only when a portrait
+       comes or goes, and animating it would drag the contents along. */
     transition:
         opacity 600ms ease-in-out,
         width var(--morph) var(--ease-morph),
-        padding-inline-start var(--morph) var(--ease-morph);
+        clip-path var(--morph) var(--ease-morph);
 }
 
 #card.is-lit {
@@ -125,6 +146,12 @@ body {
 }
 
 /* Offscreen ruler: the next person is laid out here first. */
+#card[data-align="left"] {
+    right: auto;
+    left: 0;
+    transform-origin: top left;
+}
+
 #measure {
     position: absolute;
     top: 0;
@@ -206,21 +233,14 @@ body {
     transition: none;
 }
 
-/* No padding held open, so the width reaches a true zero. */
+/* Closing clips the panel rather than resizing it. Animating width or padding
+   would reflow everything inside, which is what made the details drift. */
 #card[data-theme].box.is-shut {
-    padding-inline-start: 0;
-    padding-inline-end: 0;
-    /* No opacity fade: it would hide a sliver rather than close it. */
-    transition:
-        width var(--morph) var(--ease-morph),
-        padding-inline-start var(--morph) var(--ease-morph),
-        padding-inline-end var(--morph) var(--ease-morph);
+    clip-path: inset(0 0 0 100% round var(--radius));
 }
 
-/* The portrait holds its size while the closing edge passes over it. */
-#card[data-theme].box.is-shut .avatar {
-    width: var(--avatar);
-    flex: 0 0 var(--avatar);
+#card[data-theme][data-align="left"].box.is-shut {
+    clip-path: inset(0 100% 0 0 round var(--radius));
 }
 
 .avatar {
@@ -350,22 +370,22 @@ body {
 /* Bar: a flat panel to sit under the picture rather than float over it. */
 .box[data-theme="bar"] {
     --h: 96px;
-    padding-inline-start: 26px;
+    --radius: 8px;
+    /* Room for the accent edge. */
+    --pad-portrait: 26px;
 }
 
 .box[data-theme="bar"].no-photo {
-    padding-inline-start: 34px;
+    --pad-portrait: 34px;
 }
 
 #card[data-theme="bar"] {
     --sheer: 0.08;
     --accent-width: 5px;
-    border-radius: 8px;
-    /* Room for the accent edge. */
-    padding-inline-start: 26px;
     /* Part of the fill, not the rim, which the mask would eat. */
     background:
-        linear-gradient(to left, var(--accent) 0 var(--accent-width), transparent var(--accent-width)),
+        linear-gradient(to var(--accent-side, left),
+            var(--accent) 0 var(--accent-width), transparent var(--accent-width)),
         rgba(13, 16, 21, calc(1 - var(--sheer)));
 }
 
@@ -377,10 +397,6 @@ body {
 /* No lit rim on a flat bar. */
 #card[data-theme="bar"]::after {
     display: none;
-}
-
-#card[data-theme="bar"].no-photo {
-    padding-inline-start: 34px;
 }
 
 #card[data-theme="bar"] .avatar {
