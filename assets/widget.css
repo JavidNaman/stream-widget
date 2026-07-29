@@ -30,14 +30,16 @@
     /* Painted rather than sampled, so it has to stay dark enough for white text
        to survive over a blown-out shot as well as a dark one. */
     --tint: 18, 20, 26;
-    --tint-alpha: 0.72;
+    /* Set from ?glass= — 0 is solid, 1 is invisible. */
+    --sheer: 0.28;
 
     --ink: #ffffff;
     --ink-dim: rgba(255, 255, 255, 0.94);
     --ink-faint: rgba(255, 255, 255, 0.80);
 
-    --blur: 6px;
-    --accent: #b3282d;
+    --blur: 13px;
+    --accent: #c2333a;
+    --accent-width: 5px;
 
     /* Content easing leads out and settles in. The panel resizes on a gentler,
        symmetric curve — a front-loaded one makes a large change snap. */
@@ -100,7 +102,7 @@ body {
        three gradients trying to fake refraction and only looked smeared. */
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0) 46%),
-        rgba(var(--tint), var(--tint-alpha));
+        rgba(var(--tint), calc(1 - var(--sheer)));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
 
     opacity: 0;
@@ -173,12 +175,24 @@ body {
     filter: none;
 }
 
-/* The details rise into place instead of resolving. */
+/* The details rise into place instead of resolving: they lift away upward and
+   the next set arrives from below, so the movement reads as one direction. */
+/* :not(.is-showing) matters — without it this rule and the resting rule have
+   equal specificity, the later one wins, and the details sit low permanently. */
 #card[data-anim="slide"] .avatar,
 #card[data-anim="slide"] .info {
     filter: none;
-    transform: translateY(13px);
     transition-property: opacity, transform;
+}
+
+#card[data-anim="slide"]:not(.is-showing) .avatar,
+#card[data-anim="slide"]:not(.is-showing) .info {
+    transform: translateY(11px);
+}
+
+#card[data-anim="slide"].is-leaving:not(.is-showing) .avatar,
+#card[data-anim="slide"].is-leaving:not(.is-showing) .info {
+    transform: translateY(-11px);
 }
 
 /* A hard cut, for anyone who wants no motion at all. */
@@ -195,6 +209,28 @@ body {
     filter: none;
     opacity: 1;
     transition: none;
+}
+
+/* Closed means closed: the panel keeps no padding to hold a sliver of portrait
+   open, and disappears outright once it has nothing left to show. */
+#card.box.is-shut {
+    padding-inline-start: 0;
+    padding-inline-end: 0;
+    /* No opacity fade here on purpose. Fading it out early leaves a visible
+       sliver of the portrait at the closed edge; letting the width reach a true
+       zero is what actually shuts it. */
+    transition:
+        width var(--morph) var(--ease-morph),
+        padding-inline-start var(--morph) var(--ease-morph),
+        padding-inline-end var(--morph) var(--ease-morph);
+}
+
+/* The portrait must be able to shrink with the panel, or it holds the last few
+   pixels open on its own. */
+#card.box.is-shut .avatar {
+    width: 0;
+    min-width: 0;
+    transition: width var(--morph) var(--ease-morph);
 }
 
 .avatar {
@@ -305,10 +341,11 @@ body {
 /* Light: a solid white card for streams shot against dark scenes, where a dark
    panel disappears and a bright one reads instantly. */
 #card[data-theme="light"] {
+    --sheer: 0.06;
     --ink: #000000;
     --ink-dim: #1c1f26;
     --ink-faint: #4a4f59;
-    background: #ffffff;
+    background: rgba(255, 255, 255, calc(1 - var(--sheer)));
     box-shadow: none;
 }
 
@@ -338,13 +375,17 @@ body {
 }
 
 #card[data-theme="subtitle"] {
+    --sheer: 0.08;
+    --accent-width: 5px;
     border-radius: 8px;
     /* Room for the accent edge behind the portrait. */
     padding-inline-start: 26px;
     /* The accent is part of the fill rather than a border on the rim, which the
        glass mask would otherwise eat. In RTL "to left" puts it on the leading
        edge. Set the colour with ?accent= */
-    background: linear-gradient(to left, var(--accent) 0 5px, #0d1015 5px);
+    background:
+        linear-gradient(to left, var(--accent) 0 var(--accent-width), transparent var(--accent-width)),
+        rgba(13, 16, 21, calc(1 - var(--sheer)));
     box-shadow: none;
 }
 

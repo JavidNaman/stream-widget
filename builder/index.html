@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ساخت آدرس ویجت یادمان</title>
+<title>شخصی‌سازی ویجت</title>
 <link rel="icon" href="data:,">
 <style>
 @font-face {
@@ -22,21 +22,24 @@
 }
 
 :root {
-    --ground: #0b0d12;
-    --panel: #141821;
-    --line: #242b38;
-    --ink: #e9edf4;
-    --muted: #8b95a7;
-    --accent: #b3282d;
+    --ground: #0a0c11;
+    --panel: #12161e;
+    --raised: #1a202b;
+    --line: #232b38;
+    --ink: #eef1f6;
+    --muted: #8d97a8;
+    --accent: #c2333a;
+    --radius: 14px;
 }
 
 @media (prefers-color-scheme: light) {
     :root {
-        --ground: #f3f5f8;
+        --ground: #f2f4f7;
         --panel: #ffffff;
-        --line: #dfe3ea;
-        --ink: #141821;
-        --muted: #5c6474;
+        --raised: #f7f8fa;
+        --line: #e0e4ea;
+        --ink: #10131a;
+        --muted: #5b6474;
     }
 }
 
@@ -44,215 +47,240 @@
 
 body {
     margin: 0;
-    padding: 28px 18px 64px;
+    padding: 34px 18px 70px;
     background: var(--ground);
     color: var(--ink);
     font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+    font-size: 15px;
     -webkit-font-smoothing: antialiased;
 }
 
-.wrap {
-    max-width: 900px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 22px;
-}
+.wrap { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 26px; }
 
-h1 { margin: 0; font-size: 25px; font-weight: 800; }
-.lede { margin: 6px 0 0; color: var(--muted); font-size: 15px; line-height: 1.7; }
+h1 { margin: 0 0 26px; font-size: 27px; font-weight: 800; letter-spacing: -0.3px; }
 
-fieldset {
+section { display: flex; flex-direction: column; gap: 12px; }
+
+h2 {
     margin: 0;
-    padding: 16px 18px;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    background: var(--panel);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.3px;
 }
 
-legend { padding: 0 8px; font-size: 13px; color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; gap: 9px; }
 
-.row { display: flex; flex-wrap: wrap; gap: 10px; }
-
-.opt {
+.chip {
     position: relative;
-    display: inline-flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 9px 15px;
+    padding: 10px 18px;
     border: 1px solid var(--line);
     border-radius: 10px;
+    background: var(--panel);
     cursor: pointer;
-    font-size: 14px;
-    line-height: 1.4;
-    transition: border-color 120ms, background 120ms;
+    font-size: 14.5px;
+    font-weight: 500;
+    transition: border-color 130ms, background 130ms, color 130ms;
+    user-select: none;
 }
 
-.opt small { color: var(--muted); font-size: 12px; }
-.opt:hover { border-color: var(--muted); }
+.chip:hover { border-color: var(--muted); }
+.chip input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
-.opt input { position: absolute; opacity: 0; pointer-events: none; }
-
-.opt:has(input:checked) {
+.chip:has(input:checked) {
     border-color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    background: var(--accent);
+    color: #fff;
 }
 
-.opt:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.sliders { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
 
-label.field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
-label.field span { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; }
-label.field b { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 600; }
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 14px 16px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+}
 
-input[type="range"] { width: 100%; accent-color: var(--accent); }
-input[type="color"] { width: 100%; height: 38px; padding: 2px; background: none; border: 1px solid var(--line); border-radius: 8px; }
+.field > span { display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px; color: var(--muted); }
+.field b { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
+
+.colour { display: flex; gap: 9px; align-items: center; }
+input[type="color"] {
+    flex: 1;
+    height: 36px;
+    padding: 2px;
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    cursor: pointer;
+}
 
 .preview {
-    position: relative;
     border: 1px solid var(--line);
-    border-radius: 14px;
+    border-radius: var(--radius);
     overflow: hidden;
-    background:
-        linear-gradient(112deg, #1a2f4a 0%, #0f3d2e 42%, #3a1830 78%, #0a0a0c 100%);
 }
 
-.preview iframe { display: block; width: 100%; height: 260px; border: 0; }
+.preview iframe { display: block; width: 100%; height: 250px; border: 0; }
 
-.scenes { display: flex; gap: 8px; flex-wrap: wrap; }
-.scene-btn {
-    width: 34px; height: 26px; border-radius: 7px; border: 1px solid var(--line);
-    cursor: pointer; padding: 0;
+.scenes { display: flex; gap: 8px; }
+.scene {
+    width: 40px; height: 28px; padding: 0;
+    border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
 }
-.scene-btn[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-.out { display: flex; flex-direction: column; gap: 10px; }
+.scene[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 
 .url {
     width: 100%;
-    padding: 13px 14px;
+    padding: 14px 15px;
     border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--ground);
+    border-radius: 11px;
+    background: var(--raised);
     color: var(--ink);
     font-family: ui-monospace, Menlo, Consolas, monospace;
     font-size: 13px;
     direction: ltr;
     text-align: left;
     resize: none;
-    min-height: 78px;
+    min-height: 72px;
 }
 
-.actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.actions { display: flex; gap: 9px; flex-wrap: wrap; }
 
-button.go {
+button.act {
     font: inherit;
     font-weight: 600;
     padding: 11px 20px;
-    border: 0;
-    border-radius: 10px;
-    background: var(--accent);
-    color: #fff;
-    cursor: pointer;
-}
-
-button.ghost {
-    font: inherit;
-    padding: 11px 18px;
     border: 1px solid var(--line);
     border-radius: 10px;
-    background: none;
+    background: var(--panel);
     color: var(--ink);
     cursor: pointer;
 }
 
-.hint { color: var(--muted); font-size: 13px; line-height: 1.7; margin: 0; }
-.size { font-variant-numeric: tabular-nums; }
+button.act.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.act:hover { border-color: var(--muted); }
+
+ol.steps {
+    margin: 0;
+    padding-inline-start: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    color: var(--ink);
+    line-height: 1.85;
+}
+
+ol.steps code, .steps kbd {
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1px 7px;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 13px;
+}
+
+.note { color: var(--muted); line-height: 1.85; margin: 0; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-<header>
-    <h1>آدرس ویجت را بسازید</h1>
-    <p class="lede">
-        هرچه را عوض کنید، هم در پیش‌نمایش پایین می‌بینید و هم آدرس همان لحظه
-        به‌روز می‌شود. آخرش آدرس را کپی کنید و در OBS به‌عنوان Browser Source
-        بگذارید.
-    </p>
-</header>
+<h1>شخصی‌سازی ویجت</h1>
 
-<fieldset>
-    <legend>ظاهر</legend>
+<section>
+    <h2>تم</h2>
     <div class="row" id="themes"></div>
-</fieldset>
+</section>
 
-<fieldset>
-    <legend>نحوه‌ی عوض شدن</legend>
+<section>
+    <h2>انیمیشن</h2>
     <div class="row" id="anims"></div>
-</fieldset>
+</section>
 
-<fieldset>
-    <legend>تنظیم‌ها</legend>
-    <div class="sliders">
+<section>
+    <h2>تنظیم‌ها</h2>
+    <div class="grid">
         <label class="field">
             <span>مدت نمایش هر نفر <b id="durationOut"></b></span>
-            <input type="range" id="duration" min="2000" max="20000" step="500">
+            <input type="range" id="duration" min="1000" max="20000" step="500">
         </label>
         <label class="field">
-            <span>سرعت انتقال <b id="fadeOut"></b></span>
+            <span>مدت انیمیشن <b id="fadeOut"></b></span>
             <input type="range" id="fade" min="0" max="1200" step="20">
         </label>
-        <label class="field" id="glassField">
-            <span>غلظت شیشه <b id="glassOut"></b></span>
-            <input type="range" id="glass" min="0.25" max="0.95" step="0.01">
+        <label class="field">
+            <span>شفافیت شیشه <b id="glassOut"></b></span>
+            <input type="range" id="glass" min="0" max="0.9" step="0.01">
         </label>
-        <label class="field" id="accentField">
+        <div class="field" id="accentField">
             <span>رنگ نوار کناری <b id="accentOut"></b></span>
-            <input type="color" id="accent">
-        </label>
+            <div class="colour">
+                <input type="color" id="accent">
+                <label class="chip" style="padding:8px 14px"><input type="checkbox" id="accentOff">بدون نوار</label>
+            </div>
+        </div>
     </div>
-    <div class="row" style="margin-top:14px">
-        <label class="opt"><input type="checkbox" id="ordered">ترتیب اصلی فهرست<small>به‌جای نمایش تصادفی</small></label>
-    </div>
-</fieldset>
+</section>
 
-<fieldset>
-    <legend>پیش‌نمایش — پس‌زمینه را عوض کنید تا روی صحنه‌های مختلف ببینید</legend>
-    <div class="scenes" id="scenes" style="margin-bottom:12px"></div>
+<section>
+    <h2>پیش‌نمایش</h2>
+    <div class="scenes" id="scenes"></div>
     <div class="preview" id="preview"><iframe id="frame" title="پیش‌نمایش"></iframe></div>
-</fieldset>
+</section>
 
-<fieldset class="out">
-    <legend>آدرس برای OBS</legend>
+<section>
+    <h2>آدرس</h2>
     <textarea class="url" id="url" readonly dir="ltr"></textarea>
     <div class="actions">
-        <button class="go" id="copy">کپی آدرس</button>
-        <button class="ghost" id="open">باز کردن در تب تازه</button>
-        <button class="ghost" id="reset">بازگشت به پیش‌فرض</button>
+        <button class="act primary" id="copy">کپی آدرس</button>
+        <button class="act" id="open">باز کردن در تب جدید</button>
+        <button class="act" id="reset">ریست</button>
     </div>
-    <p class="hint">
-        در OBS: <strong>Sources → + → Browser</strong>، آدرس بالا را در کادر URL بگذارید و
-        اندازه را <span class="size">۸۰۰ در ۳۰۰</span> بگذارید. هر اندازه‌ای کار می‌کند و
-        ویجت خودش را با آن جور می‌کند؛ اندازه‌ی بزرگ‌تر یعنی تصویر بازتر و واضح‌تر.
+</section>
+
+<section>
+    <h2>اضافه کردن به OBS</h2>
+    <ol class="steps">
+        <li>آدرس بالا را با دکمه‌ی <b>کپی آدرس</b> بردارید.</li>
+        <li>در OBS، پایین پنجره در پنل <b>Sources</b> روی <b>+</b> بزنید.</li>
+        <li>از فهرست، <b>Browser</b> را انتخاب کنید.</li>
+        <li>یک نام دلخواه بنویسید (مثلاً <code>یادمان</code>) و <b>OK</b> بزنید.</li>
+        <li>در کادر <b>URL</b>، آدرس کپی‌شده را جای‌گذاری کنید و آدرس پیش‌فرض را پاک کنید.</li>
+        <li><b>Width</b> را <code>800</code> و <b>Height</b> را <code>300</code> بگذارید.</li>
+        <li>تیک <b>Shutdown source when not visible</b> را بزنید.</li>
+        <li><b>OK</b> بزنید و ویجت را با موس هرجای تصویر که خواستید بکشید.</li>
+    </ol>
+    <p class="note">
+        هر اندازه‌ای کار می‌کند و ویجت خودش را با آن جور می‌کند. کادر بزرگ‌تر یعنی
+        تصویر واضح‌تر، پس اگر می‌خواهید در OBS خیلی بزرگش کنید <code>1280</code> در
+        <code>480</code> بگذارید. برای عوض کردن تنظیم‌ها بعداً، روی سورس دوبار
+        کلیک کنید و آدرس تازه را جای‌گذاری کنید.
     </p>
-</fieldset>
+</section>
 
 </div>
 
 <script>
 const THEMES = [
-    { id: 'glass', label: 'شیشه‌ای', note: 'پیش‌فرض، روی هر صحنه‌ای' },
-    { id: 'light', label: 'سفید', note: 'نوشته‌ی مشکی، برای صحنه‌ی تاریک' },
-    { id: 'subtitle', label: 'زیرنویس', note: 'نوار مات، بدون شفافیت' },
+    { id: 'glass', label: 'شیشه‌ای' },
+    { id: 'light', label: 'سفید' },
+    { id: 'subtitle', label: 'نواری' },
 ];
 const ANIMS = [
-    { id: 'blur', label: 'تاری', note: 'تار می‌شود و واضح' },
-    { id: 'fade', label: 'محو', note: 'محو ساده' },
-    { id: 'slide', label: 'لغزش', note: 'از پایین می‌آید' },
-    { id: 'wipe', label: 'باز و بسته', note: 'کادر افقی جمع می‌شود' },
-    { id: 'none', label: 'بدون حرکت', note: 'تعویض آنی' },
+    { id: 'blur', label: 'تاری' },
+    { id: 'fade', label: 'محو' },
+    { id: 'slide', label: 'لغزش' },
+    { id: 'wipe', label: 'باز و بسته' },
+    { id: 'none', label: 'بدون حرکت' },
 ];
 const SCENES = [
     'linear-gradient(112deg,#1a2f4a,#0f3d2e 42%,#3a1830 78%,#0a0a0c)',
@@ -262,26 +290,27 @@ const SCENES = [
     '#6f6f6f',
 ];
 
-// Each theme's own defaults, mirroring the widget so the builder starts where
-// the plain URL would.
+/* Mirrors the widget, so the builder opens on exactly what the plain URL does. */
 const DEFAULTS = {
-    glass: { anim: 'blur', duration: 6000, fade: 380, glass: 0.72 },
-    light: { anim: 'slide', duration: 6000, fade: 380, glass: 0.72 },
-    subtitle: { anim: 'wipe', duration: 5000, fade: 320, glass: 0.72 },
+    glass: { anim: 'blur', duration: 5000, fade: 380, glass: 0.28 },
+    light: { anim: 'slide', duration: 5000, fade: 380, glass: 0.06 },
+    subtitle: { anim: 'wipe', duration: 5000, fade: 340, glass: 0.08 },
 };
-const ACCENT_DEFAULT = '#b3282d';
+const ACCENT_DEFAULT = '#c2333a';
 
-const state = { theme: 'glass', ordered: false, accent: ACCENT_DEFAULT, ...DEFAULTS.glass };
-let sceneIndex = 0;
+const state = { theme: 'glass', accent: ACCENT_DEFAULT, accentOff: false, ...DEFAULTS.glass };
+let scene = 0;
+let frameUrl = '';
 
 const $ = (id) => document.getElementById(id);
+const fa = (n) => n.toLocaleString('fa-IR');
 
-function radios(host, items, group, get, set) {
+function chips(host, items, group, get, set) {
     host.innerHTML = '';
     for (const item of items) {
         const label = document.createElement('label');
-        label.className = 'opt';
-        label.innerHTML = `<input type="radio" name="${group}" value="${item.id}">${item.label}<small>${item.note}</small>`;
+        label.className = 'chip';
+        label.innerHTML = `<input type="radio" name="${group}" value="${item.id}">${item.label}`;
         const input = label.querySelector('input');
         input.checked = get() === item.id;
         input.addEventListener('change', () => { set(item.id); render(); });
@@ -290,72 +319,72 @@ function radios(host, items, group, get, set) {
 }
 
 function buildScenes() {
-    const host = $('scenes');
-    host.innerHTML = '';
+    $('scenes').innerHTML = '';
     SCENES.forEach((bg, i) => {
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = 'scene-btn';
+        b.className = 'scene';
         b.style.background = bg;
-        b.setAttribute('aria-pressed', String(i === sceneIndex));
-        b.setAttribute('aria-label', 'صحنه ' + (i + 1));
-        b.addEventListener('click', () => { sceneIndex = i; render(); });
-        host.append(b);
+        b.setAttribute('aria-label', 'پس‌زمینه ' + fa(i + 1));
+        b.addEventListener('click', () => { scene = i; render(); });
+        $('scenes').append(b);
     });
 }
 
-/** The URL for the current state, leaving out anything still at its default. */
-function buildUrl(absolute) {
-    const base = new URL(state.theme === 'glass' ? '../' : `../${state.theme}/`, location.href);
+/** Only what differs from the theme's own defaults ends up in the URL. */
+function buildUrl() {
+    const base = new URL(state.theme === 'glass' ? '../' : `../${state.theme}/`, location.href).href;
     const d = DEFAULTS[state.theme];
     const q = new URLSearchParams();
     if (state.anim !== d.anim) q.set('anim', state.anim);
     if (state.duration !== d.duration) q.set('duration', state.duration);
     if (state.fade !== d.fade) q.set('fade', state.fade);
-    if (state.theme !== 'subtitle' && Math.abs(state.glass - d.glass) > 0.001) q.set('glass', state.glass);
-    if (state.theme === 'subtitle' && state.accent.toLowerCase() !== ACCENT_DEFAULT) q.set('accent', state.accent.replace('#', ''));
-    if (state.ordered) q.set('order', 'list');
+    if (Math.abs(state.glass - d.glass) > 0.001) q.set('glass', state.glass);
+    if (state.theme === 'subtitle') {
+        if (state.accentOff) q.set('accent', 'none');
+        else if (state.accent.toLowerCase() !== ACCENT_DEFAULT) q.set('accent', state.accent.replace('#', ''));
+    }
     const query = q.toString();
-    return (absolute ? base.href : base.href) + (query ? '?' + query : '');
+    return base + (query ? '?' + query : '');
 }
 
 function render() {
-    radios($('themes'), THEMES, 'theme', () => state.theme, (v) => {
+    chips($('themes'), THEMES, 'theme', () => state.theme, (v) => {
         state.theme = v;
-        Object.assign(state, DEFAULTS[v]);        // adopt that theme's own settings
+        Object.assign(state, DEFAULTS[v]);       // each theme brings its own settings
     });
-    radios($('anims'), ANIMS, 'anim', () => state.anim, (v) => { state.anim = v; });
+    chips($('anims'), ANIMS, 'anim', () => state.anim, (v) => { state.anim = v; });
 
     $('duration').value = state.duration;
     $('fade').value = state.fade;
     $('glass').value = state.glass;
     $('accent').value = state.accent;
-    $('ordered').checked = state.ordered;
+    $('accentOff').checked = state.accentOff;
 
-    $('durationOut').textContent = (state.duration / 1000).toLocaleString('fa-IR') + ' ثانیه';
-    $('fadeOut').textContent = state.fade.toLocaleString('fa-IR') + ' میلی‌ثانیه';
-    $('glassOut').textContent = state.glass.toLocaleString('fa-IR');
-    $('accentOut').textContent = state.accent;
+    $('durationOut').textContent = fa(state.duration / 1000) + ' ثانیه';
+    $('fadeOut').textContent = fa(state.fade) + ' میلی‌ثانیه';
+    $('glassOut').textContent = fa(Math.round(state.glass * 100)) + '٪';
+    $('accentOut').textContent = state.accentOff ? 'ندارد' : state.accent;
+    $('accent').disabled = state.accentOff;
 
-    // Glass density means nothing on an opaque bar; the accent means nothing off it.
-    $('glassField').style.display = state.theme === 'subtitle' ? 'none' : '';
     $('accentField').style.display = state.theme === 'subtitle' ? '' : 'none';
 
-    $('preview').style.background = SCENES[sceneIndex];
-    [...$('scenes').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === sceneIndex)));
+    $('preview').style.background = SCENES[scene];
+    [...$('scenes').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === scene)));
 
     const url = buildUrl();
     $('url').value = url;
-    const framed = new URL(url);
-    framed.searchParams.set('duration', Math.min(state.duration, 4000));   // livelier while previewing
-    if ($('frame').src !== framed.href) $('frame').src = framed.href;
+
+    const preview = new URL(url);
+    preview.searchParams.set('duration', Math.min(state.duration, 3500));
+    if (preview.href !== frameUrl) { frameUrl = preview.href; $('frame').src = frameUrl; }
 }
 
 for (const [id, key, cast] of [['duration', 'duration', Number], ['fade', 'fade', Number],
                                ['glass', 'glass', Number], ['accent', 'accent', String]]) {
     $(id).addEventListener('input', () => { state[key] = cast($(id).value); render(); });
 }
-$('ordered').addEventListener('change', () => { state.ordered = $('ordered').checked; render(); });
+$('accentOff').addEventListener('change', () => { state.accentOff = $('accentOff').checked; render(); });
 
 $('copy').addEventListener('click', async () => {
     try {
@@ -369,8 +398,8 @@ $('copy').addEventListener('click', async () => {
 });
 $('open').addEventListener('click', () => window.open($('url').value, '_blank', 'noopener'));
 $('reset').addEventListener('click', () => {
-    Object.assign(state, { theme: 'glass', ordered: false, accent: ACCENT_DEFAULT, ...DEFAULTS.glass });
-    sceneIndex = 0;
+    Object.assign(state, { theme: 'glass', accent: ACCENT_DEFAULT, accentOff: false, ...DEFAULTS.glass });
+    scene = 0;
     render();
 });
 

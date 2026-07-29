@@ -7,9 +7,9 @@ const DATA_URL = BASE + 'data.json';
 
 /* Each theme carries its own defaults; a URL parameter still wins over them. */
 const THEME_DEFAULTS = {
-    glass: { anim: 'blur', duration: 6000, fade: 380 },
-    light: { anim: 'slide', duration: 6000, fade: 380 },
-    subtitle: { anim: 'wipe', duration: 5000, fade: 320 },
+    glass: { anim: 'blur', duration: 5000, fade: 380 },
+    light: { anim: 'slide', duration: 5000, fade: 380 },
+    subtitle: { anim: 'wipe', duration: 5000, fade: 340 },
 };
 
 const params = new URLSearchParams(location.search);
@@ -35,7 +35,7 @@ function cssPixels(name, fallback) {
 }
 
 const DEFAULT_FADE = cssPixels('--fade', 520);
-const DEFAULT_GLASS = parseFloat(getComputedStyle(root).getPropertyValue('--tint-alpha')) || 0.62;
+
 const MAX_W = cssPixels('--max-w', 470);
 
 const ANIMATIONS = ['blur', 'fade', 'slide', 'wipe', 'none'];
@@ -54,7 +54,7 @@ const THEME = THEMES.includes(params.get('theme')) ? params.get('theme')
 const DEFAULTS = THEME_DEFAULTS[THEME];
 const MOTION = ANIMATIONS.includes(params.get('anim')) ? params.get('anim') : DEFAULTS.anim;
 
-const HOLD_MS = readNumber('duration', DEFAULTS.duration, 1200, 120000);
+const HOLD_MS = readNumber('duration', DEFAULTS.duration, 1000, 120000);
 const FADE_MS = readNumber('fade', DEFAULTS.fade, 0, 4000);
 // With no scale given, the widget grows to fill whatever size the Browser
 // Source is. That means a bigger source renders bigger *and sharper* rather
@@ -69,8 +69,14 @@ const SHUFFLE = params.get('order') !== 'list';
 const FADE_OUT_MS = Math.round(FADE_MS * 0.58);
 root.style.setProperty('--fade', FADE_MS + 'ms');
 root.style.setProperty('--fade-out', FADE_OUT_MS + 'ms');
-const ACCENT = readColour('accent');
-if (ACCENT) root.style.setProperty('--accent', ACCENT);
+let ACCENT_OFF = false;
+const accentParam = (params.get('accent') || '').trim().toLowerCase();
+if (accentParam === 'none' || accentParam === '0') {
+    ACCENT_OFF = true;
+} else {
+    const accent = readColour('accent');
+    if (accent) root.style.setProperty('--accent', accent);
+}
 
 for (const box of document.querySelectorAll('.box')) {
     box.dataset.theme = THEME;
@@ -92,11 +98,6 @@ function applyScale() {
 applyScale();
 addEventListener('resize', applyScale);
 
-// Only written when asked for, so leaving it alone keeps the reduced-transparency
-// and high-contrast rules in charge of how dense the glass is.
-if (params.has('glass')) {
-    root.style.setProperty('--tint-alpha', String(readNumber('glass', DEFAULT_GLASS, 0.25, 0.95)));
-}
 
 // Read after the theme is on the element, so a theme may restyle the name.
 const NAME_SIZE = parseFloat(getComputedStyle(document.querySelector('#card .name')).fontSize) || 22;
@@ -104,6 +105,16 @@ const NAME_SIZE = parseFloat(getComputedStyle(document.querySelector('#card .nam
 const elCard = document.getElementById('card');
 const elMeasure = document.getElementById('measure');
 const elInfo = elCard.querySelector('.info');
+
+// Both of these live on the card, not on the root: each theme declares its own
+// starting values there, and an inline property on the same element is what
+// overrides them.
+if (params.has('glass')) {
+    elCard.style.setProperty('--sheer', String(readNumber('glass', 0.28, 0, 0.9)));
+    elMeasure.style.setProperty('--sheer', String(readNumber('glass', 0.28, 0, 0.9)));
+}
+if (ACCENT_OFF) elCard.style.setProperty('--accent-width', '0px');
+
 
 let people = [];
 let cursor = 0;
@@ -368,15 +379,17 @@ async function showNext() {
         // The panel closes the whole way across, and only once it is shut does
         // the next person go in. Nothing of the change happens in view.
         elCard.style.setProperty('--morph', FADE_MS + 'ms');
+        elCard.classList.add('is-shut');
         elCard.style.width = '0px';
         await sleep(FADE_MS + 60);
 
         paint(elCard, upcoming, upcomingSrc, layout.nameSize);
         elInfo.style.width = layout.infoWidth + 'px';
         await showPortrait(upcomingSrc);
-        // A beat shut, so the close reads as finished rather than as a bounce.
-        await sleep(120);
+        // A beat fully shut, so the close reads as finished rather than a bounce.
+        await sleep(140);
 
+        elCard.classList.remove('is-shut');
         elCard.style.width = layout.width + 'px';
         await sleep(FADE_MS);
         ensureFits();
@@ -386,11 +399,13 @@ async function showNext() {
     // The panel resizes while the old details are fading, not in a gap of its
     // own afterwards — that gap was a visible pause with an empty pill in it.
     // By the time the next person is painted the panel is already their size.
+    elCard.classList.add('is-leaving');
     elCard.classList.remove('is-showing');
     elCard.style.setProperty('--morph', FADE_OUT_MS + 'ms');
     elCard.style.width = layout.width + 'px';
     await sleep(FADE_OUT_MS);
 
+    elCard.classList.remove('is-leaving');
     paint(elCard, upcoming, upcomingSrc, layout.nameSize);
     elInfo.style.width = layout.infoWidth + 'px';
     ensureFits();
