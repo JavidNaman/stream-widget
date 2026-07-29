@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ساخت آدرس ویجت یادمان</title>
+<link rel="icon" href="data:,">
+<style>
+@font-face {
+    font-family: 'Vazirmatn';
+    src: url('../assets/vazirmatn-arabic.woff2') format('woff2');
+    font-weight: 400 800;
+    font-display: swap;
+    unicode-range: U+0600-06FF, U+0750-077F, U+200C-200E, U+FB50-FDFF, U+FE70-FEFC;
+}
+@font-face {
+    font-family: 'Vazirmatn';
+    src: url('../assets/vazirmatn-latin.woff2') format('woff2');
+    font-weight: 400 800;
+    font-display: swap;
+    unicode-range: U+0000-00FF, U+2000-206F;
+}
+
+:root {
+    --ground: #0b0d12;
+    --panel: #141821;
+    --line: #242b38;
+    --ink: #e9edf4;
+    --muted: #8b95a7;
+    --accent: #b3282d;
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --ground: #f3f5f8;
+        --panel: #ffffff;
+        --line: #dfe3ea;
+        --ink: #141821;
+        --muted: #5c6474;
+    }
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 28px 18px 64px;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+h1 { margin: 0; font-size: 25px; font-weight: 800; }
+.lede { margin: 6px 0 0; color: var(--muted); font-size: 15px; line-height: 1.7; }
+
+fieldset {
+    margin: 0;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--panel);
+}
+
+legend { padding: 0 8px; font-size: 13px; color: var(--muted); }
+
+.row { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.opt {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 9px 15px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1.4;
+    transition: border-color 120ms, background 120ms;
+}
+
+.opt small { color: var(--muted); font-size: 12px; }
+.opt:hover { border-color: var(--muted); }
+
+.opt input { position: absolute; opacity: 0; pointer-events: none; }
+
+.opt:has(input:checked) {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.opt:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.sliders { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
+
+label.field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+label.field span { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; }
+label.field b { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 600; }
+
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+input[type="color"] { width: 100%; height: 38px; padding: 2px; background: none; border: 1px solid var(--line); border-radius: 8px; }
+
+.preview {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    background:
+        linear-gradient(112deg, #1a2f4a 0%, #0f3d2e 42%, #3a1830 78%, #0a0a0c 100%);
+}
+
+.preview iframe { display: block; width: 100%; height: 260px; border: 0; }
+
+.scenes { display: flex; gap: 8px; flex-wrap: wrap; }
+.scene-btn {
+    width: 34px; height: 26px; border-radius: 7px; border: 1px solid var(--line);
+    cursor: pointer; padding: 0;
+}
+.scene-btn[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.out { display: flex; flex-direction: column; gap: 10px; }
+
+.url {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 13px;
+    direction: ltr;
+    text-align: left;
+    resize: none;
+    min-height: 78px;
+}
+
+.actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+button.go {
+    font: inherit;
+    font-weight: 600;
+    padding: 11px 20px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+}
+
+button.ghost {
+    font: inherit;
+    padding: 11px 18px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: none;
+    color: var(--ink);
+    cursor: pointer;
+}
+
+.hint { color: var(--muted); font-size: 13px; line-height: 1.7; margin: 0; }
+.size { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+    <h1>آدرس ویجت را بسازید</h1>
+    <p class="lede">
+        هرچه را عوض کنید، هم در پیش‌نمایش پایین می‌بینید و هم آدرس همان لحظه
+        به‌روز می‌شود. آخرش آدرس را کپی کنید و در OBS به‌عنوان Browser Source
+        بگذارید.
+    </p>
+</header>
+
+<fieldset>
+    <legend>ظاهر</legend>
+    <div class="row" id="themes"></div>
+</fieldset>
+
+<fieldset>
+    <legend>نحوه‌ی عوض شدن</legend>
+    <div class="row" id="anims"></div>
+</fieldset>
+
+<fieldset>
+    <legend>تنظیم‌ها</legend>
+    <div class="sliders">
+        <label class="field">
+            <span>مدت نمایش هر نفر <b id="durationOut"></b></span>
+            <input type="range" id="duration" min="2000" max="20000" step="500">
+        </label>
+        <label class="field">
+            <span>سرعت انتقال <b id="fadeOut"></b></span>
+            <input type="range" id="fade" min="0" max="1200" step="20">
+        </label>
+        <label class="field" id="glassField">
+            <span>غلظت شیشه <b id="glassOut"></b></span>
+            <input type="range" id="glass" min="0.25" max="0.95" step="0.01">
+        </label>
+        <label class="field" id="accentField">
+            <span>رنگ نوار کناری <b id="accentOut"></b></span>
+            <input type="color" id="accent">
+        </label>
+    </div>
+    <div class="row" style="margin-top:14px">
+        <label class="opt"><input type="checkbox" id="ordered">ترتیب اصلی فهرست<small>به‌جای نمایش تصادفی</small></label>
+    </div>
+</fieldset>
+
+<fieldset>
+    <legend>پیش‌نمایش — پس‌زمینه را عوض کنید تا روی صحنه‌های مختلف ببینید</legend>
+    <div class="scenes" id="scenes" style="margin-bottom:12px"></div>
+    <div class="preview" id="preview"><iframe id="frame" title="پیش‌نمایش"></iframe></div>
+</fieldset>
+
+<fieldset class="out">
+    <legend>آدرس برای OBS</legend>
+    <textarea class="url" id="url" readonly dir="ltr"></textarea>
+    <div class="actions">
+        <button class="go" id="copy">کپی آدرس</button>
+        <button class="ghost" id="open">باز کردن در تب تازه</button>
+        <button class="ghost" id="reset">بازگشت به پیش‌فرض</button>
+    </div>
+    <p class="hint">
+        در OBS: <strong>Sources → + → Browser</strong>، آدرس بالا را در کادر URL بگذارید و
+        اندازه را <span class="size">۸۰۰ در ۳۰۰</span> بگذارید. هر اندازه‌ای کار می‌کند و
+        ویجت خودش را با آن جور می‌کند؛ اندازه‌ی بزرگ‌تر یعنی تصویر بازتر و واضح‌تر.
+    </p>
+</fieldset>
+
+</div>
+
+<script>
+const THEMES = [
+    { id: 'glass', label: 'شیشه‌ای', note: 'پیش‌فرض، روی هر صحنه‌ای' },
+    { id: 'light', label: 'سفید', note: 'نوشته‌ی مشکی، برای صحنه‌ی تاریک' },
+    { id: 'subtitle', label: 'زیرنویس', note: 'نوار مات، بدون شفافیت' },
+];
+const ANIMS = [
+    { id: 'blur', label: 'تاری', note: 'تار می‌شود و واضح' },
+    { id: 'fade', label: 'محو', note: 'محو ساده' },
+    { id: 'slide', label: 'لغزش', note: 'از پایین می‌آید' },
+    { id: 'wipe', label: 'باز و بسته', note: 'کادر افقی جمع می‌شود' },
+    { id: 'none', label: 'بدون حرکت', note: 'تعویض آنی' },
+];
+const SCENES = [
+    'linear-gradient(112deg,#1a2f4a,#0f3d2e 42%,#3a1830 78%,#0a0a0c)',
+    'linear-gradient(112deg,#07080d,#101a12 45%,#1a0b16)',
+    'linear-gradient(100deg,#ffffff,#ffeec4 45%,#ffd9e6)',
+    'linear-gradient(160deg,#3a4d63,#1b2733 60%,#0e151d)',
+    '#6f6f6f',
+];
+
+// Each theme's own defaults, mirroring the widget so the builder starts where
+// the plain URL would.
+const DEFAULTS = {
+    glass: { anim: 'blur', duration: 6000, fade: 380, glass: 0.72 },
+    light: { anim: 'slide', duration: 6000, fade: 380, glass: 0.72 },
+    subtitle: { anim: 'wipe', duration: 5000, fade: 320, glass: 0.72 },
+};
+const ACCENT_DEFAULT = '#b3282d';
+
+const state = { theme: 'glass', ordered: false, accent: ACCENT_DEFAULT, ...DEFAULTS.glass };
+let sceneIndex = 0;
+
+const $ = (id) => document.getElementById(id);
+
+function radios(host, items, group, get, set) {
+    host.innerHTML = '';
+    for (const item of items) {
+        const label = document.createElement('label');
+        label.className = 'opt';
+        label.innerHTML = `<input type="radio" name="${group}" value="${item.id}">${item.label}<small>${item.note}</small>`;
+        const input = label.querySelector('input');
+        input.checked = get() === item.id;
+        input.addEventListener('change', () => { set(item.id); render(); });
+        host.append(label);
+    }
+}
+
+function buildScenes() {
+    const host = $('scenes');
+    host.innerHTML = '';
+    SCENES.forEach((bg, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'scene-btn';
+        b.style.background = bg;
+        b.setAttribute('aria-pressed', String(i === sceneIndex));
+        b.setAttribute('aria-label', 'صحنه ' + (i + 1));
+        b.addEventListener('click', () => { sceneIndex = i; render(); });
+        host.append(b);
+    });
+}
+
+/** The URL for the current state, leaving out anything still at its default. */
+function buildUrl(absolute) {
+    const base = new URL(state.theme === 'glass' ? '../' : `../${state.theme}/`, location.href);
+    const d = DEFAULTS[state.theme];
+    const q = new URLSearchParams();
+    if (state.anim !== d.anim) q.set('anim', state.anim);
+    if (state.duration !== d.duration) q.set('duration', state.duration);
+    if (state.fade !== d.fade) q.set('fade', state.fade);
+    if (state.theme !== 'subtitle' && Math.abs(state.glass - d.glass) > 0.001) q.set('glass', state.glass);
+    if (state.theme === 'subtitle' && state.accent.toLowerCase() !== ACCENT_DEFAULT) q.set('accent', state.accent.replace('#', ''));
+    if (state.ordered) q.set('order', 'list');
+    const query = q.toString();
+    return (absolute ? base.href : base.href) + (query ? '?' + query : '');
+}
+
+function render() {
+    radios($('themes'), THEMES, 'theme', () => state.theme, (v) => {
+        state.theme = v;
+        Object.assign(state, DEFAULTS[v]);        // adopt that theme's own settings
+    });
+    radios($('anims'), ANIMS, 'anim', () => state.anim, (v) => { state.anim = v; });
+
+    $('duration').value = state.duration;
+    $('fade').value = state.fade;
+    $('glass').value = state.glass;
+    $('accent').value = state.accent;
+    $('ordered').checked = state.ordered;
+
+    $('durationOut').textContent = (state.duration / 1000).toLocaleString('fa-IR') + ' ثانیه';
+    $('fadeOut').textContent = state.fade.toLocaleString('fa-IR') + ' میلی‌ثانیه';
+    $('glassOut').textContent = state.glass.toLocaleString('fa-IR');
+    $('accentOut').textContent = state.accent;
+
+    // Glass density means nothing on an opaque bar; the accent means nothing off it.
+    $('glassField').style.display = state.theme === 'subtitle' ? 'none' : '';
+    $('accentField').style.display = state.theme === 'subtitle' ? '' : 'none';
+
+    $('preview').style.background = SCENES[sceneIndex];
+    [...$('scenes').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === sceneIndex)));
+
+    const url = buildUrl();
+    $('url').value = url;
+    const framed = new URL(url);
+    framed.searchParams.set('duration', Math.min(state.duration, 4000));   // livelier while previewing
+    if ($('frame').src !== framed.href) $('frame').src = framed.href;
+}
+
+for (const [id, key, cast] of [['duration', 'duration', Number], ['fade', 'fade', Number],
+                               ['glass', 'glass', Number], ['accent', 'accent', String]]) {
+    $(id).addEventListener('input', () => { state[key] = cast($(id).value); render(); });
+}
+$('ordered').addEventListener('change', () => { state.ordered = $('ordered').checked; render(); });
+
+$('copy').addEventListener('click', async () => {
+    try {
+        await navigator.clipboard.writeText($('url').value);
+        $('copy').textContent = 'کپی شد';
+    } catch {
+        $('url').select();
+        $('copy').textContent = 'با Ctrl+C کپی کنید';
+    }
+    setTimeout(() => { $('copy').textContent = 'کپی آدرس'; }, 1800);
+});
+$('open').addEventListener('click', () => window.open($('url').value, '_blank', 'noopener'));
+$('reset').addEventListener('click', () => {
+    Object.assign(state, { theme: 'glass', ordered: false, accent: ACCENT_DEFAULT, ...DEFAULTS.glass });
+    sceneIndex = 0;
+    render();
+});
+
+buildScenes();
+render();
+</script>
+</body>
+</html>

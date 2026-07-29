@@ -1,0 +1,397 @@
+/* Bundled so the widget never depends on a font CDN being reachable from OBS. */
+@font-face {
+    font-family: 'Vazirmatn';
+    src: url('vazirmatn-arabic.woff2') format('woff2');
+    font-weight: 400 700;
+    font-display: block;
+    unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0898-08E1,
+        U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74,
+        U+FE76-FEFC;
+}
+@font-face {
+    font-family: 'Vazirmatn';
+    src: url('vazirmatn-latin.woff2') format('woff2');
+    font-weight: 400 700;
+    font-display: block;
+    unicode-range: U+0000-00FF, U+2000-206F, U+2212, U+FEFF, U+FFFD;
+}
+
+:root {
+    --scale: 1;
+    /* Details leave quickly and arrive gently, which shortens the moment the
+       panel holds nothing and makes the change feel prompt rather than slow. */
+    --fade: 380ms;
+    --fade-out: 220ms;
+
+    --h: 112px;
+    --avatar: 76px;
+    --max-w: 470px;
+
+    /* Painted rather than sampled, so it has to stay dark enough for white text
+       to survive over a blown-out shot as well as a dark one. */
+    --tint: 18, 20, 26;
+    --tint-alpha: 0.72;
+
+    --ink: #ffffff;
+    --ink-dim: rgba(255, 255, 255, 0.94);
+    --ink-faint: rgba(255, 255, 255, 0.80);
+
+    --blur: 6px;
+    --accent: #b3282d;
+
+    /* Content easing leads out and settles in. The panel resizes on a gentler,
+       symmetric curve — a front-loaded one makes a large change snap. */
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-morph: cubic-bezier(0.45, 0.05, 0.2, 1);
+    --morph: 520ms;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: transparent;
+}
+
+body {
+    font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Shared by the card and the hidden ruler that measures the next person, so the
+   two can never disagree about how wide a record wants to be. */
+.box {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: var(--h);
+    max-width: var(--max-w);
+    /* The end side needs more room than the start: that is where the capsule
+       curves away from the text. */
+    padding-inline-start: 18px;
+    padding-inline-end: 34px;
+}
+
+/* With no portrait, the text would otherwise sit right against the curve. */
+.box.no-photo {
+    padding-inline-start: 32px;
+}
+
+/* Anchored top-right so the card grows leftward as names get longer: the
+   portrait stays exactly where the streamer put it. */
+#card {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: max-content;
+    border-radius: calc(var(--h) / 2);
+    /* While the panel resizes, the outgoing details keep their own width and are
+       wiped by the moving edge instead of being squeezed into an ellipsis. */
+    overflow: hidden;
+    transform: scale(var(--scale));
+    transform-origin: top right;
+
+    /* One quiet sheen along the top and a flat body. The earlier version stacked
+       three gradients trying to fake refraction and only looked smeared. */
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0) 46%),
+        rgba(var(--tint), var(--tint-alpha));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+
+    opacity: 0;
+    /* The panel arrives once and then stays put for the whole stream. Afterwards
+       only its width changes, morphing to fit whoever is next. */
+    transition:
+        opacity 600ms ease-in-out,
+        width var(--morph) var(--ease-morph),
+        padding-inline-start var(--morph) var(--ease-morph);
+}
+
+#card.is-lit {
+    opacity: 1;
+}
+
+/* The rim is what reads as glass rather than tinted plastic: a hairline that is
+   bright where the light would catch the capsule and nearly gone where it would
+   not. Drawn as a masked gradient border, since an inset shadow is uniform. */
+#card::after {
+background: linear-gradient(160deg,
+        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.14) 35%,
+        rgba(255, 255, 255, 0.10) 65%,
+        rgba(255, 255, 255, 0.40) 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+/* Offscreen ruler: the next person is laid out here first, so the panel knows
+   what width to morph to before anything visible changes. */
+#measure {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: max-content;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Only the contents change from person to person: they fall out of focus and
+   the next person resolves back into it. */
+.avatar,
+.info {
+    opacity: 0;
+    filter: blur(var(--blur));
+    transition:
+        opacity var(--fade-out) var(--ease),
+        filter var(--fade-out) var(--ease);
+    will-change: opacity, filter;
+}
+
+/* Duration declared on the destination state, so entering is slower than
+   leaving without needing two sets of rules. */
+#card.is-showing .avatar,
+#card.is-showing .info {
+    opacity: 1;
+    filter: blur(0px);
+    transform: none;
+    transition-duration: var(--fade);
+}
+
+/* ---- alternative changeovers, chosen with ?anim= ---- */
+
+/* Plain fade: no focus pull. */
+#card[data-anim="fade"] .avatar,
+#card[data-anim="fade"] .info {
+    filter: none;
+}
+
+/* The details rise into place instead of resolving. */
+#card[data-anim="slide"] .avatar,
+#card[data-anim="slide"] .info {
+    filter: none;
+    transform: translateY(13px);
+    transition-property: opacity, transform;
+}
+
+/* A hard cut, for anyone who wants no motion at all. */
+#card[data-anim="none"] .avatar,
+#card[data-anim="none"] .info {
+    filter: none;
+    transition: none;
+}
+
+/* Subtitle style: the panel itself closes and opens across, and the contents
+   are wiped by its edge rather than faded. */
+#card[data-anim="wipe"] .avatar,
+#card[data-anim="wipe"] .info {
+    filter: none;
+    opacity: 1;
+    transition: none;
+}
+
+.avatar {
+    position: relative;
+    flex: 0 0 auto;
+    width: var(--avatar);
+    height: var(--avatar);
+    border-radius: 50%;
+}
+
+/* People with no portrait simply have no portrait: the card closes up around
+   the text instead of showing a stand-in. */
+.avatar.is-empty {
+    display: none;
+}
+
+.avatar img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.avatar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    padding: 1px;
+    background: linear-gradient(150deg,
+        rgba(255, 255, 255, 0.75) 0%,
+        rgba(255, 255, 255, 0.18) 40%,
+        rgba(255, 255, 255, 0.3) 70%,
+        rgba(255, 255, 255, 0.65) 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+/* Width is written by JS from the ruler, so the lines never resize with the
+   panel and so can never be clipped by it mid-animation. */
+.info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    flex: 0 0 auto;
+    min-width: 0;
+    text-align: right;
+}
+
+.name,
+.meta,
+.date {
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.name {
+    font-size: var(--name-size, 22px);
+    font-weight: 800;
+    line-height: 1.3;
+    color: var(--ink);
+}
+
+/* A label in front of the name, not part of it: sized in em so it shrinks with
+   the name, and held back in weight and colour so the name still reads first. */
+.honorific {
+    font-size: 0.6em;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.62);
+    /* A literal space sits between this and the name in the markup — it is what
+       stops the shaper joining the م here to the first letter of the name — and
+       this margin only widens the gap it already makes. */
+    margin-inline-end: 3px;
+}
+
+.meta {
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--ink-dim);
+}
+
+.date {
+    font-size: 15px;
+    line-height: 1.35;
+    color: var(--ink-faint);
+}
+
+.sep {
+    opacity: 0.4;
+    margin: 0 7px;
+}
+
+.is-empty {
+    display: none;
+}
+
+
+/* ------------------------------------------------------------------ themes */
+
+/* Light: a solid white card for streams shot against dark scenes, where a dark
+   panel disappears and a bright one reads instantly. */
+#card[data-theme="light"] {
+    --ink: #000000;
+    --ink-dim: #1c1f26;
+    --ink-faint: #4a4f59;
+    background: #ffffff;
+    box-shadow: none;
+}
+
+/* No rim at all on white: a hairline round a solid card reads as a stray line,
+   not as an edge. */
+#card[data-theme="light"]::after {
+    display: none;
+}
+
+#card[data-theme="light"] .honorific {
+    color: #6b7078;
+}
+
+#card[data-theme="light"] .avatar::after {
+    display: none;
+}
+
+/* Subtitle: a flat, fully opaque bar meant to sit under the picture rather than
+   float over it. No translucency at all, so nothing behind it shows through. */
+.box[data-theme="subtitle"] {
+    --h: 96px;
+    padding-inline-start: 26px;
+}
+
+.box[data-theme="subtitle"].no-photo {
+    padding-inline-start: 34px;
+}
+
+#card[data-theme="subtitle"] {
+    border-radius: 8px;
+    /* Room for the accent edge behind the portrait. */
+    padding-inline-start: 26px;
+    /* The accent is part of the fill rather than a border on the rim, which the
+       glass mask would otherwise eat. In RTL "to left" puts it on the leading
+       edge. Set the colour with ?accent= */
+    background: linear-gradient(to left, var(--accent) 0 5px, #0d1015 5px);
+    box-shadow: none;
+}
+
+/* No lit rim: there is no glass to imply on a flat bar. */
+#card[data-theme="subtitle"]::after {
+    display: none;
+}
+
+#card[data-theme="subtitle"].no-photo {
+    padding-inline-start: 34px;
+}
+
+#card[data-theme="subtitle"] .avatar {
+    border-radius: 6px;
+}
+
+#card[data-theme="subtitle"] .avatar img {
+    border-radius: 6px;
+}
+
+#card[data-theme="subtitle"] .avatar::after {
+    border-radius: 6px;
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    :root {
+        --tint-alpha: 0.96;
+    }
+}
+
+@media (prefers-contrast: more) {
+    :root {
+        --tint-alpha: 0.9;
+        --ink-dim: rgba(255, 255, 255, 0.92);
+        --ink-faint: rgba(255, 255, 255, 0.75);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --blur: 0px;
+    }
+
+    #card,
+    .avatar,
+    .info {
+        transition-duration: 120ms;
+    }
+}
