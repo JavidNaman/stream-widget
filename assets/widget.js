@@ -340,7 +340,7 @@ async function run() {
     // this point the first person is simply shown without a photo, and the panel
     // closes up around the name exactly as it does for anyone who has none.
     const first = nextPerson();
-    const firstSrc = await Promise.race([prefetchImage(first), sleep(1200).then(() => null)]);
+    const firstSrc = await Promise.race([prefetchImage(first), sleep(2500).then(() => null)]);
     const firstLayout = measure(first, firstSrc);
 
     // No transition on the opening width, or the name would be laid out against

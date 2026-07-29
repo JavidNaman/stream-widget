@@ -237,12 +237,12 @@ body {
         padding-inline-end var(--morph) var(--ease-morph);
 }
 
-/* The portrait must be able to shrink with the panel, or it holds the last few
-   pixels open on its own. */
+/* The portrait keeps its size and its place while the panel closes over it. It
+   used to be squeezed to nothing along with the panel, which cropped the face
+   inward as it went; now the moving edge simply passes across it. */
 #card[data-theme].box.is-shut .avatar {
-    width: 0;
-    min-width: 0;
-    transition: width var(--morph) var(--ease-morph);
+    width: var(--avatar);
+    flex: 0 0 var(--avatar);
 }
 
 .avatar {

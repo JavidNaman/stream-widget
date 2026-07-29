@@ -28,7 +28,8 @@
     --line: #232b38;
     --ink: #eef1f6;
     --muted: #8d97a8;
-    --accent: #c2333a;
+    --accent: #2563eb;
+    --accent-soft: #3b82f6;
     --radius: 14px;
 }
 
@@ -55,7 +56,24 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-.wrap { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 26px; }
+.wrap { max-width: 1120px; margin: 0 auto; }
+
+.columns {
+    display: grid;
+    grid-template-columns: minmax(380px, 460px) 1fr;
+    gap: 26px;
+    align-items: start;
+}
+
+.col { display: flex; flex-direction: column; gap: 24px; }
+
+/* The preview follows you down the page while you change things on the left. */
+.col.stage { position: sticky; top: 24px; }
+
+@media (max-width: 900px) {
+    .columns { grid-template-columns: 1fr; }
+    .col.stage { position: static; }
+}
 
 h1 { margin: 0 0 26px; font-size: 27px; font-weight: 800; letter-spacing: -0.3px; }
 
@@ -154,7 +172,7 @@ input[type="color"] {
     min-height: 72px;
 }
 
-.actions { display: flex; gap: 9px; flex-wrap: wrap; }
+.actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
 button.act {
     font: inherit;
@@ -197,77 +215,83 @@ ol.steps code, .steps kbd {
 
 <h1>ساخت و شخصی‌سازی ویجت</h1>
 
-<section>
-    <h2>تم</h2>
-    <div class="row" id="themes"></div>
-</section>
+<div class="columns">
 
-<section>
-    <h2>انیمیشن</h2>
-    <div class="row" id="anims"></div>
-</section>
+<div class="col stage">
+    <section>
+        <h2>پیش‌نمایش</h2>
+        <div class="scenes" id="scenes"></div>
+        <div class="preview" id="preview"><iframe id="frame" title="پیش‌نمایش"></iframe></div>
+    </section>
 
-<section>
-    <h2>تنظیم‌ها</h2>
-    <div class="grid">
-        <label class="field">
-            <span>مدت نمایش هر نفر <b id="durationOut"></b></span>
-            <input type="range" id="duration" min="1000" max="20000" step="500">
-        </label>
-        <label class="field">
-            <span>مدت انیمیشن <b id="fadeOut"></b></span>
-            <input type="range" id="fade" min="0" max="1200" step="20">
-        </label>
-        <label class="field">
-            <span>شفافیت شیشه <b id="glassOut"></b></span>
-            <input type="range" id="glass" min="0" max="0.9" step="0.01">
-        </label>
-        <div class="field" id="accentField">
-            <span>رنگ نوار کناری <b id="accentOut"></b></span>
-            <div class="colour">
-                <input type="color" id="accent">
-                <label class="chip" style="padding:8px 14px"><input type="checkbox" id="accentOff">بدون نوار</label>
+    <section>
+        <h2>آدرس</h2>
+        <textarea class="url" id="url" readonly dir="ltr"></textarea>
+        <div class="actions">
+            <button class="act primary" id="copy">کپی آدرس</button>
+            <button class="act" id="open">باز کردن در تب جدید</button>
+            <button class="act" id="reset">ریست</button>
+        </div>
+    </section>
+</div>
+
+<div class="col">
+    <section>
+        <h2>تم</h2>
+        <div class="row" id="themes"></div>
+    </section>
+
+    <section>
+        <h2>انیمیشن</h2>
+        <div class="row" id="anims"></div>
+    </section>
+
+    <section>
+        <h2>تنظیم‌ها</h2>
+        <div class="grid">
+            <label class="field">
+                <span>مدت نمایش هر نفر <b id="durationOut"></b></span>
+                <input type="range" id="duration" min="1000" max="20000" step="500">
+            </label>
+            <label class="field">
+                <span>مدت انیمیشن <b id="fadeOut"></b></span>
+                <input type="range" id="fade" min="0" max="1200" step="20">
+            </label>
+            <label class="field">
+                <span>شفافیت شیشه <b id="glassOut"></b></span>
+                <input type="range" id="glass" min="0" max="0.9" step="0.01">
+            </label>
+            <div class="field" id="accentField">
+                <span>رنگ نوار کناری <b id="accentOut"></b></span>
+                <div class="colour">
+                    <input type="color" id="accent">
+                    <label class="chip" style="padding:8px 14px"><input type="checkbox" id="accentOff">بدون نوار</label>
+                </div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 
-<section>
-    <h2>پیش‌نمایش</h2>
-    <div class="scenes" id="scenes"></div>
-    <div class="preview" id="preview"><iframe id="frame" title="پیش‌نمایش"></iframe></div>
-</section>
+    <section>
+        <h2>اضافه کردن به OBS</h2>
+        <ol class="steps">
+            <li>آدرس را با دکمه‌ی <b>کپی آدرس</b> بردارید.</li>
+            <li>در OBS، پایین پنجره در پنل <b>Sources</b> روی <b>+</b> بزنید.</li>
+            <li>از فهرست، <b>Browser</b> را انتخاب کنید.</li>
+            <li>یک نام دلخواه بنویسید و <b>OK</b> بزنید.</li>
+            <li>در کادر <b>URL</b>، آدرس پیش‌فرض را پاک و آدرس کپی‌شده را جای‌گذاری کنید.</li>
+            <li><b>Width</b> را <code>800</code> و <b>Height</b> را <code>300</code> بگذارید.</li>
+            <li>تیک <b>Shutdown source when not visible</b> را بزنید.</li>
+            <li><b>OK</b> بزنید و ویجت را با موس هرجای تصویر که خواستید بکشید.</li>
+        </ol>
+        <p class="note">
+            هر اندازه‌ای کار می‌کند و ویجت خودش را با آن جور می‌کند. کادر بزرگ‌تر
+            یعنی تصویر واضح‌تر، پس برای بزرگ کردن زیاد در OBS <code>1280</code> در
+            <code>480</code> بگذارید.
+        </p>
+    </section>
+</div>
 
-<section>
-    <h2>آدرس</h2>
-    <textarea class="url" id="url" readonly dir="ltr"></textarea>
-    <div class="actions">
-        <button class="act primary" id="copy">کپی آدرس</button>
-        <button class="act" id="open">باز کردن در تب جدید</button>
-        <button class="act" id="reset">ریست</button>
-    </div>
-</section>
-
-<section>
-    <h2>اضافه کردن به OBS</h2>
-    <ol class="steps">
-        <li>آدرس بالا را با دکمه‌ی <b>کپی آدرس</b> بردارید.</li>
-        <li>در OBS، پایین پنجره در پنل <b>Sources</b> روی <b>+</b> بزنید.</li>
-        <li>از فهرست، <b>Browser</b> را انتخاب کنید.</li>
-        <li>یک نام دلخواه بنویسید (مثلاً <code>یادمان</code>) و <b>OK</b> بزنید.</li>
-        <li>در کادر <b>URL</b>، آدرس کپی‌شده را جای‌گذاری کنید و آدرس پیش‌فرض را پاک کنید.</li>
-        <li><b>Width</b> را <code>800</code> و <b>Height</b> را <code>300</code> بگذارید.</li>
-        <li>تیک <b>Shutdown source when not visible</b> را بزنید.</li>
-        <li><b>OK</b> بزنید و ویجت را با موس هرجای تصویر که خواستید بکشید.</li>
-    </ol>
-    <p class="note">
-        هر اندازه‌ای کار می‌کند و ویجت خودش را با آن جور می‌کند. کادر بزرگ‌تر یعنی
-        تصویر واضح‌تر، پس اگر می‌خواهید در OBS خیلی بزرگش کنید <code>1280</code> در
-        <code>480</code> بگذارید. برای عوض کردن تنظیم‌ها بعداً، روی سورس دوبار
-        کلیک کنید و آدرس تازه را جای‌گذاری کنید.
-    </p>
-</section>
-
+</div>
 </div>
 
 <script>
@@ -305,6 +329,7 @@ const ACCENT_DEFAULT = '#c2333a';
 const state = { theme: 'dark', accent: ACCENT_DEFAULT, accentOff: false, ...DEFAULTS.dark };
 let scene = 0;
 let frameUrl = '';
+let frameTimer = null;
 
 const $ = (id) => document.getElementById(id);
 const fa = (n) => n.toLocaleString('fa-IR');
@@ -380,9 +405,16 @@ function render() {
     const url = buildUrl();
     $('url').value = url;
 
+    // Dragging a slider fires on every step. Reloading the frame each time made
+    // it re-fetch the whole roster over and over, and the first portrait would
+    // still be in flight when its turn came — so the card arrived without one.
     const preview = new URL(url);
     preview.searchParams.set('duration', Math.min(state.duration, 3500));
-    if (preview.href !== frameUrl) { frameUrl = preview.href; $('frame').src = frameUrl; }
+    if (preview.href !== frameUrl) {
+        frameUrl = preview.href;
+        clearTimeout(frameTimer);
+        frameTimer = setTimeout(() => { $('frame').src = frameUrl; }, 350);
+    }
 }
 
 for (const [id, key, cast] of [['duration', 'duration', Number], ['fade', 'fade', Number],
