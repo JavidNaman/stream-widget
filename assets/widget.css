@@ -167,6 +167,18 @@ body {
     transition-duration: var(--fade);
 }
 
+/* Only for the focus pull: opacity leads and the blur trails well behind it, so
+   what you watch is the text coming into focus rather than merely appearing. */
+#card[data-anim="blur"].is-showing .avatar,
+#card[data-anim="blur"].is-showing .info {
+    transition-duration: calc(var(--fade) * 0.35), calc(var(--fade) * 1.5);
+}
+
+#card[data-anim="blur"]:not(.is-showing) .avatar,
+#card[data-anim="blur"]:not(.is-showing) .info {
+    transition-duration: calc(var(--fade-out) * 1.4), calc(var(--fade-out) * 0.7);
+}
+
 /* ---- alternative changeovers, chosen with ?anim= ---- */
 
 /* Plain fade: no focus pull. */
@@ -386,6 +398,10 @@ body {
     background:
         linear-gradient(to left, var(--accent) 0 var(--accent-width), transparent var(--accent-width)),
         rgba(13, 16, 21, calc(1 - var(--sheer)));
+}
+
+#card[data-theme="subtitle"][data-accent="none"] {
+    background: rgba(13, 16, 21, calc(1 - var(--sheer)));
     box-shadow: none;
 }
 

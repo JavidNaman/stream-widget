@@ -7,9 +7,9 @@ const DATA_URL = BASE + 'data.json';
 
 /* Each theme carries its own defaults; a URL parameter still wins over them. */
 const THEME_DEFAULTS = {
-    glass: { anim: 'blur', duration: 5000, fade: 380 },
-    light: { anim: 'slide', duration: 5000, fade: 380 },
-    subtitle: { anim: 'wipe', duration: 5000, fade: 340 },
+    glass: { anim: 'blur', duration: 5000, fade: 560 },
+    light: { anim: 'slide', duration: 5000, fade: 520 },
+    subtitle: { anim: 'wipe', duration: 5000, fade: 460 },
 };
 
 const params = new URLSearchParams(location.search);
@@ -113,7 +113,7 @@ if (params.has('glass')) {
     elCard.style.setProperty('--sheer', String(readNumber('glass', 0.28, 0, 0.9)));
     elMeasure.style.setProperty('--sheer', String(readNumber('glass', 0.28, 0, 0.9)));
 }
-if (ACCENT_OFF) elCard.style.setProperty('--accent-width', '0px');
+if (ACCENT_OFF) elCard.dataset.accent = 'none';
 
 
 let people = [];
