@@ -4,7 +4,11 @@
 
 نام و عکس و سن و شهر **۳۱۷۵ جاویدنام** را، یکی‌یکی، گوشه‌ی استریم شما
 
-### [ساخت و اضافه کردن ویجت ←](https://JavidNaman.github.io/stream-widget/builder/)
+<br>
+
+<a href="https://JavidNaman.github.io/stream-widget/builder/"><img src="assets/button.png" alt="ساخت و شخصی‌سازی ویجت" width="370"></a>
+
+<br>
 
 </div>
 

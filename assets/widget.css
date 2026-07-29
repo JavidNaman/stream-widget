@@ -225,7 +225,7 @@ body {
 
 /* Closed means closed: the panel keeps no padding to hold a sliver of portrait
    open, and disappears outright once it has nothing left to show. */
-#card.box.is-shut {
+#card[data-theme].box.is-shut {
     padding-inline-start: 0;
     padding-inline-end: 0;
     /* No opacity fade here on purpose. Fading it out early leaves a visible
@@ -239,7 +239,7 @@ body {
 
 /* The portrait must be able to shrink with the panel, or it holds the last few
    pixels open on its own. */
-#card.box.is-shut .avatar {
+#card[data-theme].box.is-shut .avatar {
     width: 0;
     min-width: 0;
     transition: width var(--morph) var(--ease-morph);
@@ -377,16 +377,16 @@ body {
 
 /* Subtitle: a flat, fully opaque bar meant to sit under the picture rather than
    float over it. No translucency at all, so nothing behind it shows through. */
-.box[data-theme="subtitle"] {
+.box[data-theme="bar"] {
     --h: 96px;
     padding-inline-start: 26px;
 }
 
-.box[data-theme="subtitle"].no-photo {
+.box[data-theme="bar"].no-photo {
     padding-inline-start: 34px;
 }
 
-#card[data-theme="subtitle"] {
+#card[data-theme="bar"] {
     --sheer: 0.08;
     --accent-width: 5px;
     border-radius: 8px;
@@ -400,29 +400,29 @@ body {
         rgba(13, 16, 21, calc(1 - var(--sheer)));
 }
 
-#card[data-theme="subtitle"][data-accent="none"] {
+#card[data-theme="bar"][data-accent="none"] {
     background: rgba(13, 16, 21, calc(1 - var(--sheer)));
     box-shadow: none;
 }
 
 /* No lit rim: there is no glass to imply on a flat bar. */
-#card[data-theme="subtitle"]::after {
+#card[data-theme="bar"]::after {
     display: none;
 }
 
-#card[data-theme="subtitle"].no-photo {
+#card[data-theme="bar"].no-photo {
     padding-inline-start: 34px;
 }
 
-#card[data-theme="subtitle"] .avatar {
+#card[data-theme="bar"] .avatar {
     border-radius: 6px;
 }
 
-#card[data-theme="subtitle"] .avatar img {
+#card[data-theme="bar"] .avatar img {
     border-radius: 6px;
 }
 
-#card[data-theme="subtitle"] .avatar::after {
+#card[data-theme="bar"] .avatar::after {
     border-radius: 6px;
     background: linear-gradient(150deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
 }

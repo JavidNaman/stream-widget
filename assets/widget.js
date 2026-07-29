@@ -1,15 +1,15 @@
 'use strict';
 
 // Every theme lives in its own folder, so paths are resolved against the repo
-// root rather than the page — light/ and subtitle/ share one copy of the data.
+// root rather than the page — every theme folder shares one copy of the data.
 const BASE = new URL('../', document.currentScript.src).href;
 const DATA_URL = BASE + 'data.json';
 
 /* Each theme carries its own defaults; a URL parameter still wins over them. */
 const THEME_DEFAULTS = {
-    glass: { anim: 'blur', duration: 5000, fade: 560 },
+    dark: { anim: 'blur', duration: 5000, fade: 560 },
     light: { anim: 'slide', duration: 5000, fade: 520 },
-    subtitle: { anim: 'wipe', duration: 5000, fade: 460 },
+    bar: { anim: 'wipe', duration: 5000, fade: 460 },
 };
 
 const params = new URLSearchParams(location.search);
@@ -46,10 +46,10 @@ function readColour(name) {
     return /^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(raw) ? '#' + raw : null;
 }
 
-const THEMES = ['glass', 'light', 'subtitle'];
+const THEMES = ['dark', 'light', 'bar'];
 const PAGE_THEME = document.body.dataset.theme;
 const THEME = THEMES.includes(params.get('theme')) ? params.get('theme')
-    : THEMES.includes(PAGE_THEME) ? PAGE_THEME : 'glass';
+    : THEMES.includes(PAGE_THEME) ? PAGE_THEME : 'dark';
 
 const DEFAULTS = THEME_DEFAULTS[THEME];
 const MOTION = ANIMATIONS.includes(params.get('anim')) ? params.get('anim') : DEFAULTS.anim;
@@ -110,8 +110,9 @@ const elInfo = elCard.querySelector('.info');
 // starting values there, and an inline property on the same element is what
 // overrides them.
 if (params.has('glass')) {
-    elCard.style.setProperty('--sheer', String(readNumber('glass', 0.28, 0, 0.9)));
-    elMeasure.style.setProperty('--sheer', String(readNumber('glass', 0.28, 0, 0.9)));
+    const sheer = String(readNumber('glass', 0.28, 0, 0.9));
+    elCard.style.setProperty('--sheer', sheer);
+    elMeasure.style.setProperty('--sheer', sheer);
 }
 if (ACCENT_OFF) elCard.dataset.accent = 'none';
 

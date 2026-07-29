@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>شخصی‌سازی ویجت</title>
+<title>ساخت و شخصی‌سازی ویجت</title>
 <link rel="icon" href="data:,">
 <style>
 @font-face {
@@ -129,7 +129,8 @@ input[type="color"] {
     overflow: hidden;
 }
 
-.preview iframe { display: block; width: 100%; height: 250px; border: 0; }
+.preview { padding: 26px 22px; }
+.preview iframe { display: block; width: 100%; height: 250px; border: 0; border-radius: 8px; }
 
 .scenes { display: flex; gap: 8px; }
 .scene {
@@ -194,7 +195,7 @@ ol.steps code, .steps kbd {
 <body>
 <div class="wrap">
 
-<h1>شخصی‌سازی ویجت</h1>
+<h1>ساخت و شخصی‌سازی ویجت</h1>
 
 <section>
     <h2>تم</h2>
@@ -271,9 +272,9 @@ ol.steps code, .steps kbd {
 
 <script>
 const THEMES = [
-    { id: 'glass', label: 'شیشه‌ای' },
+    { id: 'dark', label: 'تیره' },
     { id: 'light', label: 'سفید' },
-    { id: 'subtitle', label: 'نواری' },
+    { id: 'bar', label: 'نواری' },
 ];
 const ANIMS = [
     { id: 'blur', label: 'تاری' },
@@ -282,23 +283,26 @@ const ANIMS = [
     { id: 'wipe', label: 'باز و بسته' },
     { id: 'none', label: 'بدون حرکت' },
 ];
+/* Backdrops to judge the widget against: the Windows 11 desktop is the one
+   people actually see it over while they are setting it up. */
 const SCENES = [
-    'linear-gradient(112deg,#1a2f4a,#0f3d2e 42%,#3a1830 78%,#0a0a0c)',
-    'linear-gradient(112deg,#07080d,#101a12 45%,#1a0b16)',
-    'linear-gradient(100deg,#ffffff,#ffeec4 45%,#ffd9e6)',
-    'linear-gradient(160deg,#3a4d63,#1b2733 60%,#0e151d)',
-    '#6f6f6f',
+    { name: 'ویندوز ۱۱', css: 'radial-gradient(120% 130% at 32% 18%, #2a6ec4 0%, #1b3f86 38%, #101a3d 68%, #07091c 100%)' },
+    { name: 'شب', css: 'linear-gradient(112deg,#0b1020,#123a2c 45%,#3a1030)' },
+    { name: 'گرم', css: 'linear-gradient(115deg,#3a1408,#7a2a10 45%,#b8541f)' },
+    { name: 'روشن', css: 'linear-gradient(100deg,#ffffff,#ffeec4 45%,#ffd9e6)' },
+    { name: 'سبز', css: 'linear-gradient(150deg,#0d3b2e,#1f6b४f 55%,#0a1f18)'.replace('४','4') },
+    { name: 'خاکستری', css: '#6f6f6f' },
 ];
 
 /* Mirrors the widget, so the builder opens on exactly what the plain URL does. */
 const DEFAULTS = {
-    glass: { anim: 'blur', duration: 5000, fade: 560, glass: 0.28 },
+    dark: { anim: 'blur', duration: 5000, fade: 560, glass: 0.28 },
     light: { anim: 'slide', duration: 5000, fade: 520, glass: 0.06 },
-    subtitle: { anim: 'wipe', duration: 5000, fade: 460, glass: 0.08 },
+    bar: { anim: 'wipe', duration: 5000, fade: 460, glass: 0.08 },
 };
 const ACCENT_DEFAULT = '#c2333a';
 
-const state = { theme: 'glass', accent: ACCENT_DEFAULT, accentOff: false, ...DEFAULTS.glass };
+const state = { theme: 'dark', accent: ACCENT_DEFAULT, accentOff: false, ...DEFAULTS.dark };
 let scene = 0;
 let frameUrl = '';
 
@@ -324,8 +328,9 @@ function buildScenes() {
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'scene';
-        b.style.background = bg;
-        b.setAttribute('aria-label', 'پس‌زمینه ' + fa(i + 1));
+        b.style.background = bg.css;
+        b.title = bg.name;
+        b.setAttribute('aria-label', bg.name);
         b.addEventListener('click', () => { scene = i; render(); });
         $('scenes').append(b);
     });
@@ -333,14 +338,14 @@ function buildScenes() {
 
 /** Only what differs from the theme's own defaults ends up in the URL. */
 function buildUrl() {
-    const base = new URL(state.theme === 'glass' ? '../' : `../${state.theme}/`, location.href).href;
+    const base = new URL(state.theme === 'dark' ? '../' : `../${state.theme}/`, location.href).href;
     const d = DEFAULTS[state.theme];
     const q = new URLSearchParams();
     if (state.anim !== d.anim) q.set('anim', state.anim);
     if (state.duration !== d.duration) q.set('duration', state.duration);
     if (state.fade !== d.fade) q.set('fade', state.fade);
     if (Math.abs(state.glass - d.glass) > 0.001) q.set('glass', state.glass);
-    if (state.theme === 'subtitle') {
+    if (state.theme === 'bar') {
         if (state.accentOff) q.set('accent', 'none');
         else if (state.accent.toLowerCase() !== ACCENT_DEFAULT) q.set('accent', state.accent.replace('#', ''));
     }
@@ -367,9 +372,9 @@ function render() {
     $('accentOut').textContent = state.accentOff ? 'ندارد' : state.accent;
     $('accent').disabled = state.accentOff;
 
-    $('accentField').style.display = state.theme === 'subtitle' ? '' : 'none';
+    $('accentField').style.display = state.theme === 'bar' ? '' : 'none';
 
-    $('preview').style.background = SCENES[scene];
+    $('preview').style.background = SCENES[scene].css;
     [...$('scenes').children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === scene)));
 
     const url = buildUrl();
@@ -398,7 +403,7 @@ $('copy').addEventListener('click', async () => {
 });
 $('open').addEventListener('click', () => window.open($('url').value, '_blank', 'noopener'));
 $('reset').addEventListener('click', () => {
-    Object.assign(state, { theme: 'glass', accent: ACCENT_DEFAULT, accentOff: false, ...DEFAULTS.glass });
+    Object.assign(state, { theme: 'dark', accent: ACCENT_DEFAULT, accentOff: false, ...DEFAULTS.dark });
     scene = 0;
     render();
 });
