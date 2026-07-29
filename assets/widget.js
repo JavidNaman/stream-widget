@@ -1,11 +1,10 @@
 'use strict';
 
-// Every theme lives in its own folder, so paths are resolved against the repo
-// root rather than the page — every theme folder shares one copy of the data.
+// Themes live in subfolders; resolve data and images against the repo root.
 const BASE = new URL('../', document.currentScript.src).href;
 const DATA_URL = BASE + 'data.json';
 
-/* Each theme carries its own defaults; a URL parameter still wins over them. */
+/* Per-theme defaults. URL parameters override them. */
 const THEME_DEFAULTS = {
     dark: { anim: 'blur', duration: 5000, fade: 560 },
     light: { anim: 'slide', duration: 5000, fade: 520 },
@@ -14,9 +13,7 @@ const THEME_DEFAULTS = {
 
 const params = new URLSearchParams(location.search);
 
-/** Reads a numeric URL parameter, falling back when absent or nonsense.
-    Note the explicit null check — Number(null) is 0, not NaN, so without it a
-    missing parameter would silently clamp to the minimum instead. */
+/** Numeric URL parameter. Number(null) is 0, hence the explicit null check. */
 function readNumber(name, fallback, min, max) {
     const raw = params.get(name);
     if (raw === null || raw.trim() === '') return fallback;
@@ -27,8 +24,7 @@ function readNumber(name, fallback, min, max) {
 
 const root = document.documentElement;
 
-/** Reads a length declared in the stylesheet, so a value the CSS owns is never
-    also hard-coded here where the two could drift apart. */
+/** Reads a length owned by the stylesheet. */
 function cssPixels(name, fallback) {
     const value = parseFloat(getComputedStyle(root).getPropertyValue(name));
     return Number.isFinite(value) ? value : fallback;
@@ -40,7 +36,7 @@ const MAX_W = cssPixels('--max-w', 470);
 
 const ANIMATIONS = ['blur', 'fade', 'slide', 'wipe', 'none'];
 
-/** A CSS colour given as a URL parameter, hex with or without the #. */
+/** Hex colour from a URL parameter, with or without the #. */
 function readColour(name) {
     const raw = (params.get(name) || '').trim().replace(/^#/, '');
     return /^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(raw) ? '#' + raw : null;
@@ -56,10 +52,7 @@ const MOTION = ANIMATIONS.includes(params.get('anim')) ? params.get('anim') : DE
 
 const HOLD_MS = readNumber('duration', DEFAULTS.duration, 1000, 120000);
 const FADE_MS = readNumber('fade', DEFAULTS.fade, 0, 4000);
-// With no scale given, the widget grows to fill whatever size the Browser
-// Source is. That means a bigger source renders bigger *and sharper* rather
-// than being upscaled afterwards, and it keeps working for anyone who set the
-// source to the old 800x300 before the card was resized.
+// Without an explicit scale, fill the browser source: bigger source, sharper render.
 const AUTO_SCALE = !params.has('scale');
 const SCALE = readNumber('scale', 1, 0.4, 4);
 const SHUFFLE = params.get('order') !== 'list';
@@ -106,9 +99,7 @@ const elCard = document.getElementById('card');
 const elMeasure = document.getElementById('measure');
 const elInfo = elCard.querySelector('.info');
 
-// Both of these live on the card, not on the root: each theme declares its own
-// starting values there, and an inline property on the same element is what
-// overrides them.
+// On the card, not the root: themes declare their values there.
 if (params.has('glass')) {
     const sheer = String(readNumber('glass', 0.28, 0, 0.9));
     elCard.style.setProperty('--sheer', sheer);
@@ -122,8 +113,7 @@ let cursor = 0;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Fetches the roster, retrying so a source that starts before the network is up
-    recovers on its own instead of staying blank. */
+/** Fetches the roster, retrying until it succeeds. */
 async function loadPeople() {
     for (let attempt = 0; ; attempt++) {
         try {
@@ -146,8 +136,7 @@ function shuffle(list) {
     return list;
 }
 
-/** Walks the roster, reshuffling on each pass without repeating the person who
-    was just on screen across the wrap. */
+/** Next person, reshuffling on wrap without repeating the last one. */
 function nextPerson() {
     if (cursor >= people.length) {
         const last = people[people.length - 1];
@@ -160,9 +149,7 @@ function nextPerson() {
     return people[cursor++];
 }
 
-/** Warms the cache for a portrait and reports whether it is usable at all.
-    Decoding a detached Image only gets the bytes in; the element on screen still
-    has to load and decode them itself, which is what showPortrait waits for. */
+/** Warms the cache. The on-screen element still decodes separately. */
 async function prefetchImage(person) {
     if (!person.photo) return null;
     const src = BASE + 'images/' + person.id + '.jpg';
@@ -176,9 +163,8 @@ async function prefetchImage(person) {
     }
 }
 
-/** Points the on-screen portrait at `src` and resolves only once that element is
-    ready to paint it. Without this the card can spend a frame or two still
-    showing the previous person's photo beside the new person's name. */
+/** Sets the portrait and waits until it can be painted, so the previous one
+    is never left showing beside the new name. */
 async function showPortrait(src) {
     const image = elCard.querySelector('img');
     if (!src) {
@@ -195,7 +181,7 @@ async function showPortrait(src) {
     }
 }
 
-/** Sets text, hiding the element entirely when there is nothing to show. */
+/** Sets text, hiding the element when empty. */
 function setText(el, text) {
     const value = text == null ? '' : String(text).trim();
     el.textContent = value;
@@ -212,15 +198,13 @@ function paint(box, person, src, nameSize) {
 
     avatar.classList.toggle('is-empty', !src);
     box.classList.toggle('no-photo', !src);
-    // The pixels are swapped by showPortrait, which can wait for the decode.
+    // showPortrait swaps the pixels; it can wait for the decode.
     if (image) image.alt = src ? (person.name || '') : '';
 
-    // Only the given name is written; the honorific in front of it is markup and
-    // stays where it is.
+    // The honorific in front is markup and stays put.
     box.querySelector('.given').textContent = person.name || 'ناشناس';
 
-    // Age and place share a line; whichever is missing drops out, and if both are
-    // missing the line disappears rather than leaving a gap.
+    // Age and place share a line; a missing one drops out.
     const bits = [];
     if (Number.isFinite(person.age)) bits.push(toPersianDigits(person.age) + ' ساله');
     if (person.place) bits.push(person.place);
@@ -244,12 +228,8 @@ function paint(box, person, src, nameSize) {
     else box.style.removeProperty('--name-size');
 }
 
-/** Nobody's name gets cut short. The handful too long for the panel step down a
-    point or two instead of ending in an ellipsis.
-
-    This is measured on the ruler and never on the card, because the card's width
-    is often mid-animation — measuring against it sized the very first name
-    against an empty 52px panel and cropped it. */
+/** Steps an over-long name down rather than truncating it. Measured on the
+    ruler, never on the card, whose width is often mid-animation. */
 function fitName(box) {
     const name = box.querySelector('.name');
     box.style.removeProperty('--name-size');
@@ -260,7 +240,7 @@ function fitName(box) {
     return size;
 }
 
-/** How many pixels short the widest line in `box` is, or 0 if everything fits. */
+/** Pixels by which the widest line overflows, or 0. */
 function shortfall(box) {
     let worst = 0;
     for (const line of box.querySelectorAll('.info > p')) {
@@ -270,10 +250,7 @@ function shortfall(box) {
     return worst > 1 ? worst : 0;
 }
 
-/** Final guarantee that nothing on the card ends in an ellipsis. Widens the
-    panel to cover any shortfall, and only if it is already at its limit does it
-    fall back to stepping the name down. Costs nothing when everything fits,
-    which is the normal case. */
+/** Widens the panel to cover any overflow; at the cap, shrinks the name. */
 function ensureFits() {
     for (let pass = 0; pass < 3; pass++) {
         const short = shortfall(elCard);
@@ -287,15 +264,12 @@ function ensureFits() {
     if (shortfall(elCard)) fitName(elCard);
 }
 
-/** How the panel should be laid out for this person, worked out offscreen at the
-    final width so nothing has to be measured against a moving target. */
+/** Layout for one person, measured offscreen at the final width. */
 function measure(person, src) {
     elMeasure.querySelector('.info').style.removeProperty('width');
     paint(elMeasure, person, src);
     const nameSize = fitName(elMeasure);
-    // offsetWidth is a whole number but the layout underneath is not, so a panel
-    // built to the reported width can land a fraction of a pixel short and clip
-    // the very text it was measured from. Two pixels covers the rounding.
+    // offsetWidth rounds; two pixels covers the fraction it drops.
     return {
         width: Math.min(MAX_W, elMeasure.offsetWidth + 2),
         infoWidth: Math.ceil(elMeasure.querySelector('.info').getBoundingClientRect().width) + 2,
@@ -303,8 +277,7 @@ function measure(person, src) {
     };
 }
 
-/** Resolves once the browser source is on screen again, so an inactive scene
-    doesn't silently burn through the roster. */
+/** Waits until the browser source is on screen again. */
 function whenVisible() {
     if (!document.hidden) return Promise.resolve();
     return new Promise((resolve) => {
@@ -320,31 +293,21 @@ async function run() {
     people = await loadPeople();
     if (SHUFFLE) shuffle(people);
 
-    // Every width on this card is measured, so the real font has to be in place
-    // before any measuring happens — Vazirmatn is wider than the fallback, and a
-    // panel measured in the fallback is built too narrow for the name it holds.
-    //
-    // Asking for fonts.ready alone is not enough: at this point nothing on the
-    // page has any text in it, so the browser has not requested the font yet and
-    // ready resolves immediately against an empty page. These load calls demand
-    // the faces outright, with Persian sample text so the Arabic subset — the one
-    // that actually renders these names — is the one that gets fetched.
+    // Load the faces before measuring anything. fonts.ready alone resolves
+    // immediately here, since nothing on the page has text yet; the sample text
+    // is what pulls in the Arabic subset these names render in.
     await Promise.all([
         document.fonts.load('700 23px Vazirmatn', 'آزمایش'),
         document.fonts.load('400 17px Vazirmatn', 'آزمایش'),
     ]).catch(() => {});
     await document.fonts.ready;
 
-    // The opening card must not be held hostage by one portrait. On a slow link
-    // a stalled image would leave the overlay blank for as long as it took; past
-    // this point the first person is simply shown without a photo, and the panel
-    // closes up around the name exactly as it does for anyone who has none.
+    // Never let one stalled portrait hold the opening card back.
     const first = nextPerson();
     const firstSrc = await Promise.race([prefetchImage(first), sleep(2500).then(() => null)]);
     const firstLayout = measure(first, firstSrc);
 
-    // No transition on the opening width, or the name would be laid out against
-    // a panel that is still growing into place.
+    // No transition on the opening width, or the name is measured mid-growth.
     elCard.style.setProperty('--morph', '0ms');
     elCard.style.width = firstLayout.width + 'px';
     elInfo.style.width = firstLayout.infoWidth + 'px';
@@ -355,9 +318,7 @@ async function run() {
     elCard.classList.add('is-lit', 'is-showing');
 
     while (people.length > 1) {
-        // This runs unattended for hours, so one unreadable record must not be
-        // able to end the stream's memorial. Anything unexpected costs that
-        // person their turn and nothing more.
+        // One bad record costs that person their turn, not the whole run.
         try {
             await showNext();
         } catch {
@@ -367,8 +328,7 @@ async function run() {
 }
 
 async function showNext() {
-    // Work the next person out while the current one is still on screen, so the
-    // change never waits on the network or the decoder.
+    // Prepare the next person while the current one is still up.
     const upcoming = nextPerson();
     const upcomingSrc = await prefetchImage(upcoming);
     const layout = measure(upcoming, upcomingSrc);
@@ -377,8 +337,7 @@ async function showNext() {
     await whenVisible();
 
     if (MOTION === 'wipe') {
-        // The panel closes the whole way across, and only once it is shut does
-        // the next person go in. Nothing of the change happens in view.
+        // Closes fully before the next person goes in.
         elCard.style.setProperty('--morph', FADE_MS + 'ms');
         elCard.classList.add('is-shut');
         elCard.style.width = '0px';
@@ -387,7 +346,7 @@ async function showNext() {
         paint(elCard, upcoming, upcomingSrc, layout.nameSize);
         elInfo.style.width = layout.infoWidth + 'px';
         await showPortrait(upcomingSrc);
-        // A beat fully shut, so the close reads as finished rather than a bounce.
+        // A beat shut, so it reads as closed rather than bounced.
         await sleep(140);
 
         elCard.classList.remove('is-shut');
@@ -397,9 +356,7 @@ async function showNext() {
         return;
     }
 
-    // The panel resizes while the old details are fading, not in a gap of its
-    // own afterwards — that gap was a visible pause with an empty pill in it.
-    // By the time the next person is painted the panel is already their size.
+    // Resize under the fade-out, so there is no pause with an empty panel.
     elCard.classList.add('is-leaving');
     elCard.classList.remove('is-showing');
     elCard.style.setProperty('--morph', FADE_OUT_MS + 'ms');

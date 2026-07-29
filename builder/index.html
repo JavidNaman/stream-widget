@@ -67,7 +67,7 @@ body {
 
 .col { display: flex; flex-direction: column; gap: 24px; }
 
-/* The preview follows you down the page while you change things on the left. */
+/* Follows the page while the controls on the left change. */
 .col.stage { position: sticky; top: 24px; }
 
 @media (max-width: 900px) {
@@ -307,8 +307,7 @@ const ANIMS = [
     { id: 'wipe', label: 'باز و بسته' },
     { id: 'none', label: 'بدون حرکت' },
 ];
-/* Backdrops to judge the widget against: the Windows 11 desktop is the one
-   people actually see it over while they are setting it up. */
+/* Backdrops to judge the widget against. */
 const SCENES = [
     { name: 'ویندوز ۱۱', css: 'radial-gradient(120% 130% at 32% 18%, #2a6ec4 0%, #1b3f86 38%, #101a3d 68%, #07091c 100%)' },
     { name: 'شب', css: 'linear-gradient(112deg,#0b1020,#123a2c 45%,#3a1030)' },
@@ -318,7 +317,7 @@ const SCENES = [
     { name: 'خاکستری', css: '#6f6f6f' },
 ];
 
-/* Mirrors the widget, so the builder opens on exactly what the plain URL does. */
+/* Mirrors the widget's own defaults. */
 const DEFAULTS = {
     dark: { anim: 'blur', duration: 5000, fade: 560, glass: 0.28 },
     light: { anim: 'slide', duration: 5000, fade: 520, glass: 0.06 },
@@ -361,7 +360,7 @@ function buildScenes() {
     });
 }
 
-/** Only what differs from the theme's own defaults ends up in the URL. */
+/** Only what differs from the theme's defaults ends up in the URL. */
 function buildUrl() {
     const base = new URL(state.theme === 'dark' ? '../' : `../${state.theme}/`, location.href).href;
     const d = DEFAULTS[state.theme];
@@ -381,7 +380,7 @@ function buildUrl() {
 function render() {
     chips($('themes'), THEMES, 'theme', () => state.theme, (v) => {
         state.theme = v;
-        Object.assign(state, DEFAULTS[v]);       // each theme brings its own settings
+        Object.assign(state, DEFAULTS[v]);
     });
     chips($('anims'), ANIMS, 'anim', () => state.anim, (v) => { state.anim = v; });
 
@@ -405,9 +404,7 @@ function render() {
     const url = buildUrl();
     $('url').value = url;
 
-    // Dragging a slider fires on every step. Reloading the frame each time made
-    // it re-fetch the whole roster over and over, and the first portrait would
-    // still be in flight when its turn came — so the card arrived without one.
+    // Debounced: a slider fires on every step, and each reload refetches the roster.
     const preview = new URL(url);
     preview.searchParams.set('duration', Math.min(state.duration, 3500));
     if (preview.href !== frameUrl) {

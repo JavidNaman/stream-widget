@@ -1,4 +1,4 @@
-/* Bundled so the widget never depends on a font CDN being reachable from OBS. */
+/* Bundled: no font CDN dependency. */
 @font-face {
     font-family: 'Vazirmatn';
     src: url('vazirmatn-arabic.woff2') format('woff2');
@@ -18,8 +18,7 @@
 
 :root {
     --scale: 1;
-    /* Details leave quickly and arrive gently, which shortens the moment the
-       panel holds nothing and makes the change feel prompt rather than slow. */
+    /* Leaves quickly, arrives gently. */
     --fade: 380ms;
     --fade-out: 220ms;
 
@@ -27,10 +26,9 @@
     --avatar: 76px;
     --max-w: 470px;
 
-    /* Painted rather than sampled, so it has to stay dark enough for white text
-       to survive over a blown-out shot as well as a dark one. */
+    /* Painted, not sampled: dark enough for white text over a blown-out shot. */
     --tint: 18, 20, 26;
-    /* Set from ?glass= — 0 is solid, 1 is invisible. */
+    /* ?glass= — 0 solid, 1 invisible. */
     --sheer: 0.28;
 
     --ink: #ffffff;
@@ -41,8 +39,7 @@
     --accent: #c2333a;
     --accent-width: 5px;
 
-    /* Content easing leads out and settles in. The panel resizes on a gentler,
-       symmetric curve — a front-loaded one makes a large change snap. */
+    /* The panel resizes on a symmetric curve; a front-loaded one snaps. */
     --ease: cubic-bezier(0.4, 0, 0.2, 1);
     --ease-morph: cubic-bezier(0.45, 0.05, 0.2, 1);
     --morph: 520ms;
@@ -65,49 +62,43 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-/* Shared by the card and the hidden ruler that measures the next person, so the
-   two can never disagree about how wide a record wants to be. */
+/* Shared by the card and the ruler that measures the next person. */
 .box {
     display: flex;
     align-items: center;
     gap: 16px;
     height: var(--h);
     max-width: var(--max-w);
-    /* The end side needs more room than the start: that is where the capsule
-       curves away from the text. */
+    /* The end side is where the capsule curves away from the text. */
     padding-inline-start: 18px;
     padding-inline-end: 34px;
 }
 
-/* With no portrait, the text would otherwise sit right against the curve. */
+/* Without a portrait the text would sit against the curve. */
 .box.no-photo {
     padding-inline-start: 32px;
 }
 
-/* Anchored top-right so the card grows leftward as names get longer: the
-   portrait stays exactly where the streamer put it. */
+/* Anchored top-right, so the portrait stays where it was placed. */
 #card {
     position: absolute;
     top: 0;
     right: 0;
     width: max-content;
     border-radius: calc(var(--h) / 2);
-    /* While the panel resizes, the outgoing details keep their own width and are
-       wiped by the moving edge instead of being squeezed into an ellipsis. */
+    /* Lets the moving edge wipe the outgoing details rather than squeeze them. */
     overflow: hidden;
     transform: scale(var(--scale));
     transform-origin: top right;
 
-    /* One quiet sheen along the top and a flat body. The earlier version stacked
-       three gradients trying to fake refraction and only looked smeared. */
+    /* One sheen along the top over a flat body. */
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0) 46%),
         rgba(var(--tint), calc(1 - var(--sheer)));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
 
     opacity: 0;
-    /* The panel arrives once and then stays put for the whole stream. Afterwards
-       only its width changes, morphing to fit whoever is next. */
+    /* Arrives once, then only its width changes. */
     transition:
         opacity 600ms ease-in-out,
         width var(--morph) var(--ease-morph),
@@ -118,9 +109,8 @@ body {
     opacity: 1;
 }
 
-/* The rim is what reads as glass rather than tinted plastic: a hairline that is
-   bright where the light would catch the capsule and nearly gone where it would
-   not. Drawn as a masked gradient border, since an inset shadow is uniform. */
+/* A masked gradient border, bright where light would catch the capsule.
+   An inset shadow can only be uniform. */
 #card::after {
 background: linear-gradient(160deg,
         rgba(255, 255, 255, 0.55) 0%,
@@ -134,8 +124,7 @@ body {
     pointer-events: none;
 }
 
-/* Offscreen ruler: the next person is laid out here first, so the panel knows
-   what width to morph to before anything visible changes. */
+/* Offscreen ruler: the next person is laid out here first. */
 #measure {
     position: absolute;
     top: 0;
@@ -145,8 +134,7 @@ body {
     pointer-events: none;
 }
 
-/* Only the contents change from person to person: they fall out of focus and
-   the next person resolves back into it. */
+/* Only the contents change from person to person. */
 .avatar,
 .info {
     opacity: 0;
@@ -157,8 +145,7 @@ body {
     will-change: opacity, filter;
 }
 
-/* Duration declared on the destination state, so entering is slower than
-   leaving without needing two sets of rules. */
+/* Duration on the destination state: entering is slower than leaving. */
 #card.is-showing .avatar,
 #card.is-showing .info {
     opacity: 1;
@@ -167,8 +154,7 @@ body {
     transition-duration: var(--fade);
 }
 
-/* Only for the focus pull: opacity leads and the blur trails well behind it, so
-   what you watch is the text coming into focus rather than merely appearing. */
+/* Focus pull: opacity leads, blur trails, so the text visibly sharpens. */
 #card[data-anim="blur"].is-showing .avatar,
 #card[data-anim="blur"].is-showing .info {
     transition-duration: calc(var(--fade) * 0.35), calc(var(--fade) * 1.5);
@@ -181,16 +167,14 @@ body {
 
 /* ---- alternative changeovers, chosen with ?anim= ---- */
 
-/* Plain fade: no focus pull. */
+/* Plain fade. */
 #card[data-anim="fade"] .avatar,
 #card[data-anim="fade"] .info {
     filter: none;
 }
 
-/* The details rise into place instead of resolving: they lift away upward and
-   the next set arrives from below, so the movement reads as one direction. */
-/* :not(.is-showing) matters — without it this rule and the resting rule have
-   equal specificity, the later one wins, and the details sit low permanently. */
+/* Lifts away upward, arrives from below. */
+/* :not(.is-showing) or this ties with the resting rule and wins by order. */
 #card[data-anim="slide"] .avatar,
 #card[data-anim="slide"] .info {
     filter: none;
@@ -207,15 +191,14 @@ body {
     transform: translateY(-11px);
 }
 
-/* A hard cut, for anyone who wants no motion at all. */
+/* A hard cut. */
 #card[data-anim="none"] .avatar,
 #card[data-anim="none"] .info {
     filter: none;
     transition: none;
 }
 
-/* Subtitle style: the panel itself closes and opens across, and the contents
-   are wiped by its edge rather than faded. */
+/* The panel closes and opens across; its edge wipes the contents. */
 #card[data-anim="wipe"] .avatar,
 #card[data-anim="wipe"] .info {
     filter: none;
@@ -223,23 +206,18 @@ body {
     transition: none;
 }
 
-/* Closed means closed: the panel keeps no padding to hold a sliver of portrait
-   open, and disappears outright once it has nothing left to show. */
+/* No padding held open, so the width reaches a true zero. */
 #card[data-theme].box.is-shut {
     padding-inline-start: 0;
     padding-inline-end: 0;
-    /* No opacity fade here on purpose. Fading it out early leaves a visible
-       sliver of the portrait at the closed edge; letting the width reach a true
-       zero is what actually shuts it. */
+    /* No opacity fade: it would hide a sliver rather than close it. */
     transition:
         width var(--morph) var(--ease-morph),
         padding-inline-start var(--morph) var(--ease-morph),
         padding-inline-end var(--morph) var(--ease-morph);
 }
 
-/* The portrait keeps its size and its place while the panel closes over it. It
-   used to be squeezed to nothing along with the panel, which cropped the face
-   inward as it went; now the moving edge simply passes across it. */
+/* The portrait holds its size while the closing edge passes over it. */
 #card[data-theme].box.is-shut .avatar {
     width: var(--avatar);
     flex: 0 0 var(--avatar);
@@ -253,8 +231,7 @@ body {
     border-radius: 50%;
 }
 
-/* People with no portrait simply have no portrait: the card closes up around
-   the text instead of showing a stand-in. */
+/* No portrait means no portrait; the card closes up around the text. */
 .avatar.is-empty {
     display: none;
 }
@@ -285,8 +262,7 @@ body {
     pointer-events: none;
 }
 
-/* Width is written by JS from the ruler, so the lines never resize with the
-   panel and so can never be clipped by it mid-animation. */
+/* Width comes from the ruler, so lines never resize with the panel. */
 .info {
     display: flex;
     flex-direction: column;
@@ -313,15 +289,13 @@ body {
     color: var(--ink);
 }
 
-/* A label in front of the name, not part of it: sized in em so it shrinks with
-   the name, and held back in weight and colour so the name still reads first. */
+/* A label in front of the name: held back so the name reads first. */
 .honorific {
     font-size: 0.6em;
     font-weight: 400;
     color: rgba(255, 255, 255, 0.62);
-    /* A literal space sits between this and the name in the markup — it is what
-       stops the shaper joining the م here to the first letter of the name — and
-       this margin only widens the gap it already makes. */
+    /* A real space in the markup breaks the shaping run; this only widens
+       the gap it makes. */
     margin-inline-end: 3px;
 }
 
@@ -350,8 +324,7 @@ body {
 
 /* ------------------------------------------------------------------ themes */
 
-/* Light: a solid white card for streams shot against dark scenes, where a dark
-   panel disappears and a bright one reads instantly. */
+/* Light: a solid card for dark scenes. */
 #card[data-theme="light"] {
     --sheer: 0.06;
     --ink: #000000;
@@ -361,8 +334,7 @@ body {
     box-shadow: none;
 }
 
-/* No rim at all on white: a hairline round a solid card reads as a stray line,
-   not as an edge. */
+/* No rim on white: a hairline round a solid card reads as a stray line. */
 #card[data-theme="light"]::after {
     display: none;
 }
@@ -375,8 +347,7 @@ body {
     display: none;
 }
 
-/* Subtitle: a flat, fully opaque bar meant to sit under the picture rather than
-   float over it. No translucency at all, so nothing behind it shows through. */
+/* Bar: a flat panel to sit under the picture rather than float over it. */
 .box[data-theme="bar"] {
     --h: 96px;
     padding-inline-start: 26px;
@@ -390,11 +361,9 @@ body {
     --sheer: 0.08;
     --accent-width: 5px;
     border-radius: 8px;
-    /* Room for the accent edge behind the portrait. */
+    /* Room for the accent edge. */
     padding-inline-start: 26px;
-    /* The accent is part of the fill rather than a border on the rim, which the
-       glass mask would otherwise eat. In RTL "to left" puts it on the leading
-       edge. Set the colour with ?accent= */
+    /* Part of the fill, not the rim, which the mask would eat. */
     background:
         linear-gradient(to left, var(--accent) 0 var(--accent-width), transparent var(--accent-width)),
         rgba(13, 16, 21, calc(1 - var(--sheer)));
@@ -405,7 +374,7 @@ body {
     box-shadow: none;
 }
 
-/* No lit rim: there is no glass to imply on a flat bar. */
+/* No lit rim on a flat bar. */
 #card[data-theme="bar"]::after {
     display: none;
 }
